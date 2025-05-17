@@ -1,4 +1,4 @@
-import { FillLayerSpecification } from "mapbox-gl";
+import { FillLayerSpecification } from 'mapbox-gl';
 
 ///////////////////////////////////////////////////
 // Common interfaces
@@ -47,16 +47,11 @@ export type RgbaDecimal = {
   a: number;
 };
 
-export type FillPaint = FillLayerSpecification["paint"];
-
-export interface AirspaceDisplayState {
-  name: string;
-  sectors: SectorDisplayState[];
-}
+export type FillPaint = FillLayerSpecification['paint'];
 
 export interface AppDisplayState {
   updateCount: number;
-  areaDisplayStates: AirspaceDisplayState[];
+  centerDisplayStates: CenterAirspaceDisplayState[];
 }
 
 ///////////////////////////////////////////////////
@@ -73,54 +68,48 @@ export interface CenterAreaDefinition {
   sectors: CenterSectorDefinition[];
 }
 
-export interface SectorDisplayState {
+export interface CenterDisplayState {
   name: string;
-  //parentAreaName: AirspaceConfigDependentGroup;
   isDisplayed: boolean;
   color: string;
+}
+
+export interface CenterAirspaceDisplayState {
+  name: string;
+  sectors: CenterDisplayState[];
 }
 
 ///////////////////////////////////////////////////
 // Tracon interfaces
 ///////////////////////////////////////////////////
-export type AirspaceConfigDependentGroup = "RNO" | "SMF" | "A" | "B" | "C" | "D";
+export type AirspaceConfigDependentGroup = 'RNO' | 'SMF' | 'A' | 'B' | 'C' | 'D';
 
-export type AirspaceConfig =
-  | "RNON"
-  | "RNOS"
-  | "SMFN"
-  | "SMFS"
-  | "SFOW"
-  | "SFOE"
-  | "SFO10"
-  | "OAKE"
-  | "SJCE"
-  | "";
+export type AirspaceConfig = 'RNON' | 'RNOS' | 'SMFN' | 'SMFS' | 'SFOW' | 'SFOE' | 'SFO10' | 'OAKE' | 'SJCE' | '';
 
-export type AirportConfig = "SFOW" | "SFO19" | "SFO10" | "OAKW" | "OAKE" | "SJCW" | "SJCE";
+export type AirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';
 
 export type SectorName =
-  | "Nugget"
-  | "Silver"
-  | "Elkhorn"
-  | "Paradise"
-  | "Seca"
-  | "Morgan"
-  | "Licke"
-  | "Toga"
-  | "Richmond"
-  | "Sutro"
-  | "Grove"
-  | "Valley"
-  | "Sunol"
-  | "Boulder"
-  | "Cedar"
-  | "Foster"
-  | "Laguna"
-  | "Niles"
-  | "Woodside";
+  | 'Nugget'
+  | 'Silver'
+  | 'Elkhorn'
+  | 'Paradise'
+  | 'Seca'
+  | 'Morgan'
+  | 'Licke'
+  | 'Toga'
+  | 'Richmond'
+  | 'Sutro'
+  | 'Grove'
+  | 'Valley'
+  | 'Sunol'
+  | 'Boulder'
+  | 'Cedar'
+  | 'Foster'
+  | 'Laguna'
+  | 'Niles'
+  | 'Woodside';
 
-interface AirspaceConfigWithPolys {
+export interface AirspaceConfigWithPolys {
   sectorName: SectorName;
   defaultColor: string;
   configPolyUrls: {
@@ -136,15 +125,27 @@ export interface AreaPolys {
   sectorConfigs: AirspaceConfigWithPolys[];
 }
 
-export interface TraconAirspaceDisplayState {
+export interface AirspaceDisplayState {
   name: AirspaceConfigDependentGroup;
   selectedConfig: AirspaceConfig;
   sectors: SectorDisplayState[];
 }
 
+export interface TraconAppDisplayState {
+  updateCount: number;
+  areaDisplayStates: AirspaceDisplayState[];
+}
+
 export interface PolyDefinition {
   name: AirspaceConfigDependentGroup;
   polys: AreaPolys;
+}
+
+export interface SectorDisplayState {
+  name: SectorName;
+  parentAreaName: AirspaceConfigDependentGroup;
+  isDisplayed: boolean;
+  color: string;
 }
 
 ///////////////////////////////////////////////////
@@ -169,7 +170,7 @@ export interface ArrivalProcedureDisplayState {
 
 export interface Sequence {
   transition?: string;
-  transitionType: "AreaNavigationCommon" | "AreaNavigationEnroute" | "AreaNavigationRunway";
+  transitionType: 'AreaNavigationCommon' | 'AreaNavigationEnroute' | 'AreaNavigationRunway';
   points: Point[];
 }
 

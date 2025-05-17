@@ -1,8 +1,8 @@
-import { Component, createMemo, For, Show } from "solid-js";
-import { AppDisplayState } from "~/types.ts";
-import { SetStoreFunction } from "solid-js/store";
-import { Checkbox } from "./ui-core";
-import { cn } from "~/lib/utils";
+import { Component, createMemo, For, Show } from 'solid-js';
+import { AppDisplayState } from '~/types.ts';
+import { SetStoreFunction } from 'solid-js/store';
+import { Checkbox } from './ui-core';
+import { cn } from '~/lib/utils';
 
 interface SectorDisplayWithControlsProps {
   airspaceGroup: string;
@@ -12,12 +12,10 @@ interface SectorDisplayWithControlsProps {
 
 export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
   const thisAirspaceGroup = createMemo(() =>
-    props.store.areaDisplayStates.find((a) => a.name === props.airspaceGroup),
+    props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup),
   );
 
-  const checkedSectors = createMemo(() =>
-    thisAirspaceGroup()?.sectors.filter((s) => s.isDisplayed),
-  );
+  const checkedSectors = createMemo(() => thisAirspaceGroup()?.sectors.filter((s) => s.isDisplayed));
 
   const showCheckAll = createMemo(() => {
     const checked = checkedSectors();
@@ -38,7 +36,7 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
 
   return (
     <div>
-      <div class={cn(["flex flex-col space-y-1 mt-2"])}>
+      <div class={cn(['flex flex-col space-y-1 mt-2'])}>
         <div class="text-white">{props.airspaceGroup}</div>
         <div class="flex flex-row space-x-2 cursor-pointer">
           <Show when={showCheckAll()}>
@@ -46,11 +44,11 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
               class="text-gray-400 hover:text-gray-200 transition text-xs"
               onClick={() =>
                 props.setStore(
-                  "areaDisplayStates",
+                  'centerDisplayStates',
                   (a) => a.name === props.airspaceGroup,
-                  "sectors",
+                  'sectors',
                   (_s) => true,
-                  "isDisplayed",
+                  'isDisplayed',
                   true,
                 )
               }
@@ -63,11 +61,11 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
               class="text-gray-400 hover:text-gray-200 transition text-xs"
               onClick={() =>
                 props.setStore(
-                  "areaDisplayStates",
+                  'centerDisplayStates',
                   (a) => a.name === props.airspaceGroup,
-                  "sectors",
+                  'sectors',
                   (_s) => true,
-                  "isDisplayed",
+                  'isDisplayed',
                   false,
                 )
               }
@@ -76,9 +74,7 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
             </div>
           </Show>
         </div>
-        <For
-          each={props.store.areaDisplayStates.find((a) => a.name === props.airspaceGroup)?.sectors}
-        >
+        <For each={props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup)?.sectors}>
           {(sector) => (
             <div class="flex justify-between">
               <Checkbox
@@ -86,14 +82,14 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
                 checked={sector.isDisplayed}
                 onChange={(val) => {
                   props.setStore(
-                    "areaDisplayStates",
+                    'centerDisplayStates',
                     (a) => a.name === props.airspaceGroup,
-                    "sectors",
+                    'sectors',
                     (s) => s.name === sector.name,
-                    "isDisplayed",
+                    'isDisplayed',
                     val,
                   );
-                  props.setStore("updateCount", (prev) => prev + 1);
+                  props.setStore('updateCount', (prev) => prev + 1);
                 }}
               />
               <input
@@ -102,14 +98,14 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
                 class="w-6 h-6 mr-2"
                 onChange={(e) => {
                   props.setStore(
-                    "areaDisplayStates",
+                    'centerDisplayStates',
                     (a) => a.name === props.airspaceGroup,
-                    "sectors",
+                    'sectors',
                     (s) => s.name === sector.name,
-                    "color",
+                    'color',
                     e.target.value,
                   );
-                  props.setStore("updateCount", (prev) => prev + 1);
+                  props.setStore('updateCount', (prev) => prev + 1);
                 }}
               />
             </div>

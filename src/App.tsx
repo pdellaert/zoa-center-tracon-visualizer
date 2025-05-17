@@ -1,12 +1,12 @@
-import { makePersisted } from "@solid-primitives/storage";
-import { Component, createEffect, createSignal, DEV, For, Show } from "solid-js";
-import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from "~/defaults.ts";
-import { Section } from "~/components/ui-core/Section.tsx";
-import { MapStyleSelector } from "~/components/MapStyleSelector.tsx";
-import { createStore, produce } from "solid-js/store";
-import { BASE_MAPS, CENTER_POLY_DEFINITIONS } from "~/config.ts";
+import { makePersisted } from '@solid-primitives/storage';
+import { Component, createEffect, createSignal, DEV, For, Show } from 'solid-js';
+import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/defaults.ts';
+import { Section } from '~/components/ui-core/Section.tsx';
+import { MapStyleSelector } from '~/components/MapStyleSelector.tsx';
+import { createStore, produce } from 'solid-js/store';
+import { BASE_MAPS, CENTER_POLY_DEFINITIONS } from '~/config.ts';
 import {
-  AirspaceDisplayState,
+  CenterAirspaceDisplayState,
   AppDisplayState,
   CenterAreaDefinition,
   FillPaint,
@@ -15,28 +15,28 @@ import {
   PopupState,
   Settings,
   ArrivalProcedure,
-} from "~/types.ts";
-import { Checkbox } from "~/components/ui-core/Checkbox.tsx";
-import { Footer } from "~/components/Footer.tsx";
-import { MapReset } from "~/components/MapReset.tsx";
+} from '~/types.ts';
+import { Checkbox } from '~/components/ui-core/Checkbox.tsx';
+import { Footer } from '~/components/Footer.tsx';
+import { MapReset } from '~/components/MapReset.tsx';
 
 // Mapbox
-import MapGL from "solid-map-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import MapGL from 'solid-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-import { BaseMaps } from "~/components/BaseMaps.tsx";
-import { GeojsonPolyLayers } from "~/components/GeojsonPolyLayers.tsx";
-import { GeojsonPolySources } from "~/components/GeojsonPolySources.tsx";
-import { SectorDisplayWithControls } from "~/components/SectorDisplayWithControls.tsx";
-import { SettingsDialog } from "~/components/SettingsDialog.tsx";
-import { GeoJSONFeature, MapMouseEvent } from "mapbox-gl";
-import { getUniqueLayers, isTransparentFill } from "~/lib/geojson.ts";
-import { logIfDev } from "~/lib/dev.ts";
-import { InfoPopup } from "~/components/InfoPopup.tsx";
-import { ProceduresDialog } from "~/components/ProceduresDialog.tsx";
-import { ArrivalPoints } from "~/components/ArrivalPoints.tsx";
+import { BaseMaps } from '~/components/BaseMaps.tsx';
+import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
+import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
+import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
+import { SettingsDialog } from '~/components/SettingsDialog.tsx';
+import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
+import { getUniqueLayers, isTransparentFill } from '~/lib/geojson.ts';
+import { logIfDev } from '~/lib/dev.ts';
+import { InfoPopup } from '~/components/InfoPopup.tsx';
+import { ProceduresDialog } from '~/components/ProceduresDialog.tsx';
+import { ArrivalPoints } from '~/components/ArrivalPoints.tsx';
 
-const createDefaultState = (area: CenterAreaDefinition): AirspaceDisplayState => ({
+const createDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplayState => ({
   name: area.name,
   sectors: area.sectors.map((s) => ({
     name: s.sectorName,
@@ -47,11 +47,11 @@ const createDefaultState = (area: CenterAreaDefinition): AirspaceDisplayState =>
 
 const App: Component = () => {
   const [viewport, setViewport] = makePersisted(createSignal(DEFAULT_VIEWPORT), {
-    name: "viewport",
+    name: 'viewport',
   });
 
   const [mapStyle, setMapStyle] = makePersisted(createSignal(DEFAULT_MAP_STYLE), {
-    name: "mapStyle",
+    name: 'mapStyle',
   });
 
   const [persistedBaseMaps, setPersistedBaseMaps] = makePersisted(
@@ -62,17 +62,17 @@ const App: Component = () => {
         checked: m.showDefault,
       })),
     ),
-    { name: "baseMaps" },
+    { name: 'baseMaps' },
   );
 
   const [mountedBaseMaps, setMountedBaseMaps] = createStore<MountedBaseMapState[]>(
     persistedBaseMaps.map((m) => ({ id: m.baseMap.name, hasMounted: m.checked })),
   );
 
-  const [cursor, setCursor] = createSignal("grab");
+  const [cursor, setCursor] = createSignal('grab');
 
   const [settings, setSettings] = makePersisted(createStore<Settings>(DEFAULT_SETTINGS), {
-    name: "settings",
+    name: 'settings',
   });
 
   const sources = CENTER_POLY_DEFINITIONS.flatMap((a) =>
@@ -86,7 +86,7 @@ const App: Component = () => {
 
   const [allStore, setAllStore] = createStore<AppDisplayState>({
     updateCount: 0,
-    areaDisplayStates: CENTER_POLY_DEFINITIONS.map(createDefaultState),
+    centerDisplayStates: CENTER_POLY_DEFINITIONS.map(createDefaultState),
   });
 
   const [popup, setPopup] = createStore<PopupState>({
@@ -100,24 +100,20 @@ const App: Component = () => {
   const altitudeHover = (evt: MapMouseEvent) => {
     if (!evt.target.isStyleLoaded()) return;
     const features: GeoJSONFeature[] = evt.target.queryRenderedFeatures(evt.point, {
-      filter: ["all", ["==", ["geometry-type"], "Polygon"], ["has", "minAlt"], ["has", "maxAlt"]],
+      filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['has', 'minAlt'], ['has', 'maxAlt']],
     });
-    const fillLayers = getUniqueLayers(features.filter((f) => f.layer?.type == "fill"));
+    const fillLayers = getUniqueLayers(features.filter((f) => f.layer?.type == 'fill'));
     if (fillLayers.length > 0) {
       logIfDev(fillLayers);
       let transparentLayers: GeoJSONFeature[] = [];
       let visibleLayers: GeoJSONFeature[] = [];
       fillLayers.forEach((l) =>
-        isTransparentFill(l.layer?.paint as FillPaint)
-          ? transparentLayers.push(l)
-          : visibleLayers.push(l),
+        isTransparentFill(l.layer?.paint as FillPaint) ? transparentLayers.push(l) : visibleLayers.push(l),
       );
       if (settings.popup.showUncheckedSectors) {
         setPopup(
           produce((state) => {
-            state.vis = settings.popup.uncheckedSectorsInVisibleSectorsOnly
-              ? visibleLayers.length > 0
-              : true;
+            state.vis = settings.popup.uncheckedSectorsInVisibleSectorsOnly ? visibleLayers.length > 0 : true;
             state.hoveredPolys = fillLayers;
           }),
         );
@@ -130,13 +126,13 @@ const App: Component = () => {
         );
       }
     } else {
-      setPopup("vis", false);
+      setPopup('vis', false);
     }
   };
 
   createEffect(() => {
-    if (popup.vis) setCursor("crosshair");
-    else setCursor("grab");
+    if (popup.vis) setCursor('crosshair');
+    else setCursor('grab');
   });
 
   const handleArrivalToggle = (arrival: ArrivalProcedure, isDisplayed: boolean) => {
@@ -215,35 +211,15 @@ const App: Component = () => {
               <div>HA</div>
             </Show>
             <Show when={activeTab() === 'center'}>
-              <SectorDisplayWithControls
-                airspaceGroup={"Area North"}
-                store={allStore}
-                setStore={setAllStore}
-              />
+              <SectorDisplayWithControls airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls
-                airspaceGroup={"Area East"}
-                store={allStore}
-                setStore={setAllStore}
-              />
+              <SectorDisplayWithControls airspaceGroup={'Area East'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls
-                airspaceGroup={"Area South"}
-                store={allStore}
-                setStore={setAllStore}
-              />
+              <SectorDisplayWithControls airspaceGroup={'Area South'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls
-                airspaceGroup={"Pac North"}
-                store={allStore}
-                setStore={setAllStore}
-              />
+              <SectorDisplayWithControls airspaceGroup={'Pac North'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls
-                airspaceGroup={"Pac South"}
-                store={allStore}
-                setStore={setAllStore}
-              />
+              <SectorDisplayWithControls airspaceGroup={'Pac South'} store={allStore} setStore={setAllStore} />
             </Show>
           </Section>
         </div>
