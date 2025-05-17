@@ -1,5 +1,5 @@
 import { makePersisted } from "@solid-primitives/storage";
-import { Component, createEffect, createSignal, DEV, For } from "solid-js";
+import { Component, createEffect, createSignal, DEV, For, Show } from "solid-js";
 import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from "~/defaults.ts";
 import { Section } from "~/components/ui-core/Section.tsx";
 import { MapStyleSelector } from "~/components/MapStyleSelector.tsx";
@@ -82,13 +82,12 @@ const App: Component = () => {
     })),
   );
 
-  const [allStore, setAllStore] = makePersisted(
-    createStore<AppDisplayState>({
-      updateCount: 0,
-      areaDisplayStates: CENTER_POLY_DEFINITIONS.map((a) => createDefaultState(a)),
-    }),
-    { name: "currentDisplay" },
-  );
+  const [activeTab, setActiveTab] = createSignal<'tracon' | 'center'>('tracon');
+
+  const [allStore, setAllStore] = createStore<AppDisplayState>({
+    updateCount: 0,
+    areaDisplayStates: CENTER_POLY_DEFINITIONS.map(createDefaultState),
+  });
 
   const [popup, setPopup] = createStore<PopupState>({
     hoveredPolys: [],
@@ -168,7 +167,7 @@ const App: Component = () => {
             <MapStyleSelector style={mapStyle} setStyle={setMapStyle} />
           </Section>
 
-          <Section header="NCT Base Maps">
+          <Section header="Base Maps">
             <div class="flex flex-col space-y-1">
               <For each={persistedBaseMaps}>
                 {(m) => (
@@ -196,36 +195,56 @@ const App: Component = () => {
             </div>
           </Section>
 
-          <Section header="Sectors" class="space-y-2">
-            <SectorDisplayWithControls
-              airspaceGroup={"Area North"}
-              store={allStore}
-              setStore={setAllStore}
-            />
+          <Section header="" class="space-y-2">
+            <div class="flex border-b border-slate-600 mb-2">
+              <button
+                class={`px-4 py-2 font-medium ${activeTab() === 'tracon' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
+                onClick={() => setActiveTab('tracon')}
+              >
+                TRACON
+              </button>
+              <button
+                class={`px-4 py-2 font-medium ${activeTab() === 'center' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}
+                onClick={() => setActiveTab('center')}
+              >
+                Center
+              </button>
+            </div>
 
-            <SectorDisplayWithControls
-              airspaceGroup={"Area East"}
-              store={allStore}
-              setStore={setAllStore}
-            />
+            <Show when={activeTab() === 'tracon'}>
+              <div>HA</div>
+            </Show>
+            <Show when={activeTab() === 'center'}>
+              <SectorDisplayWithControls
+                airspaceGroup={"Area North"}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-            <SectorDisplayWithControls
-              airspaceGroup={"Area South"}
-              store={allStore}
-              setStore={setAllStore}
-            />
+              <SectorDisplayWithControls
+                airspaceGroup={"Area East"}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-            <SectorDisplayWithControls
-              airspaceGroup={"Pac North"}
-              store={allStore}
-              setStore={setAllStore}
-            />
+              <SectorDisplayWithControls
+                airspaceGroup={"Area South"}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-            <SectorDisplayWithControls
-              airspaceGroup={"Pac South"}
-              store={allStore}
-              setStore={setAllStore}
-            />
+              <SectorDisplayWithControls
+                airspaceGroup={"Pac North"}
+                store={allStore}
+                setStore={setAllStore}
+              />
+
+              <SectorDisplayWithControls
+                airspaceGroup={"Pac South"}
+                store={allStore}
+                setStore={setAllStore}
+              />
+            </Show>
           </Section>
         </div>
         <Footer />
