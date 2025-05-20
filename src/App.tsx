@@ -1,10 +1,10 @@
 import { makePersisted } from '@solid-primitives/storage';
-import { Component, createEffect, createSignal, DEV, For, Show } from 'solid-js';
+import { Accessor, batch, Component, createEffect, createMemo, createSignal, DEV, For, Show, untrack } from 'solid-js';
 import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/defaults.ts';
-import { Section } from '~/components/ui-core/Section.tsx';
+import { Section, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui-core';
 import { MapStyleSelector } from '~/components/MapStyleSelector.tsx';
 import { createStore, produce } from 'solid-js/store';
-import { BASE_MAPS, CENTER_POLY_DEFINITIONS } from '~/config.ts';
+import { BASE_MAPS, CENTER_POLY_DEFINITIONS, POLY_DEFINITIONS } from '~/config.ts';
 import {
   CenterAirspaceDisplayState,
   AppDisplayState,
@@ -15,6 +15,10 @@ import {
   PopupState,
   Settings,
   ArrivalProcedure,
+  AirspaceConfig,
+  AirportConfig,
+  AreaPolys,
+  AirspaceDisplayState,
 } from '~/types.ts';
 import { Checkbox } from '~/components/ui-core/Checkbox.tsx';
 import { Footer } from '~/components/Footer.tsx';
@@ -27,10 +31,13 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { BaseMaps } from '~/components/BaseMaps.tsx';
 import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
 import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
+import { TraconGeojsonPolyLayers } from '~/components/TraconGeojsonPolyLayers.tsx';
+import { TraconGeojsonPolySources } from '~/components/TraconGeojsonPolySources.tsx';
 import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
+import { TraconSectorDisplayWithControls } from '~/components/TraconSectorDisplayWithControls.tsx';
 import { SettingsDialog } from '~/components/SettingsDialog.tsx';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
-import { getUniqueLayers, isTransparentFill } from '~/lib/geojson.ts';
+import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson.ts';
 import { logIfDev } from '~/lib/dev.ts';
 import { InfoPopup } from '~/components/InfoPopup.tsx';
 import { ProceduresDialog } from '~/components/ProceduresDialog.tsx';
@@ -42,6 +49,17 @@ const createDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplaySt
     name: s.sectorName,
     isDisplayed: false,
     color: s.defaultColor,
+  })),
+});
+
+const createAreaDefaultState = (config: AreaPolys): AirspaceDisplayState => ({
+  name: config.name,
+  selectedConfig: config.defaultConfig,
+  sectors: config.sectorConfigs.map((c) => ({
+    name: c.sectorName,
+    parentAreaName: config.name,
+    isDisplayed: false,
+    color: c.defaultColor,
   })),
 });
 
@@ -75,19 +93,25 @@ const App: Component = () => {
     name: 'settings',
   });
 
-  const sources = CENTER_POLY_DEFINITIONS.flatMap((a) =>
+  const centerSources = CENTER_POLY_DEFINITIONS.flatMap((a) =>
     a.sectors.map((s) => ({
       id: s.sectorName,
       url: s.polyUrl,
     })),
   );
 
+  const sources = POLY_DEFINITIONS.flatMap((p) => getGeojsonSources(p.polys));
+
   const [activeTab, setActiveTab] = createSignal<'tracon' | 'center'>('tracon');
 
-  const [allStore, setAllStore] = createStore<AppDisplayState>({
-    updateCount: 0,
-    centerDisplayStates: CENTER_POLY_DEFINITIONS.map(createDefaultState),
-  });
+  const [allStore, setAllStore] = makePersisted(
+    createStore<AppDisplayState>({
+      updateCount: 0,
+      centerDisplayStates: CENTER_POLY_DEFINITIONS.map(createDefaultState),
+      areaDisplayStates: POLY_DEFINITIONS.map((p) => createAreaDefaultState(p.polys)),
+    }),
+    { name: 'currentDisplay' },
+  );
 
   const [popup, setPopup] = createStore<PopupState>({
     hoveredPolys: [],
@@ -144,6 +168,93 @@ const App: Component = () => {
       }
     });
   };
+
+  const [bayConfig, setBayConfig] = makePersisted(createSignal<AirspaceConfig>('SFOW'), {
+    name: 'bayConfig',
+  });
+  const [sfoConfig, setSfoConfig] = makePersisted(createSignal<AirportConfig>('SFOW'), {
+    name: 'sfoConfig',
+  });
+  const [oakConfig, setOakConfig] = makePersisted(createSignal<AirportConfig>('OAKW'), {
+    name: 'oakConfig',
+  });
+  const [sjcConfig, setSjcConfig] = makePersisted(createSignal<AirportConfig>('SJCW'), {
+    name: 'sjcConfig',
+  });
+
+  const sfoOptions = createMemo(() => {
+    if (bayConfig() === 'SFOW') {
+      return ['SFOW'];
+    } else if (bayConfig() === 'SFOE') {
+      return ['SFO19', 'SFO10'];
+    } else {
+      return [];
+    }
+  });
+
+  const oakOptions = createMemo(() => (bayConfig() === 'SFOW' ? ['OAKW', 'OAKE'] : ['OAKE']));
+  const sjcOptions = createMemo(() => (bayConfig() === 'SFOW' ? ['SJCW', 'SJCE'] : ['SJCE']));
+
+  const areaA: Accessor<AirspaceConfig> = createMemo(() => {
+    if (bayConfig() === 'SFOW') {
+      return sjcConfig() === 'SJCE' ? 'SJCE' : 'SFOW';
+    } else {
+      return bayConfig() === 'SFOE' ? 'SFOE' : '';
+    }
+  });
+
+  const areaBC: Accessor<AirspaceConfig> = createMemo(() => {
+    if (bayConfig() === 'SFOW') {
+      return oakConfig() === 'OAKE' ? 'OAKE' : 'SFOW';
+    } else {
+      if (bayConfig() === 'SFOE') {
+        return sfoConfig() === 'SFO19' ? 'SFOE' : 'SFO10';
+      } else {
+        return '';
+      }
+    }
+  });
+
+  const areaD: Accessor<AirspaceConfig> = createMemo(() => {
+    if (bayConfig() === 'SFOW') {
+      return oakConfig() === 'OAKE' ? 'OAKE' : 'SFOW';
+    } else {
+      return bayConfig() === 'SFOE' ? 'SFOE' : '';
+    }
+  });
+
+  createEffect((isInitialLoad) => {
+    if (bayConfig() === 'SFOW') {
+      batch(() => {
+        setSfoConfig('SFOW');
+        // Need to track if initial state load from persistence. If so, don't trigger default reset
+        if (!isInitialLoad) {
+          setOakConfig('OAKW');
+          setSjcConfig('SJCW');
+        }
+      });
+    } else if (bayConfig() === 'SFOE') {
+      batch(() => {
+        if (untrack(sfoConfig) === 'SFOW' || untrack(sfoConfig) == null) {
+          setSfoConfig('SFO19');
+        }
+        setOakConfig('OAKE');
+        setSjcConfig('SJCE');
+      });
+    }
+    return false;
+  }, true);
+
+  // Console debugging effects only created in DEV
+  if (import.meta.env.DEV) {
+    createEffect(() => {
+      console.log('Update count', allStore.updateCount);
+      console.log('Sectors display state', allStore.areaDisplayStates);
+    });
+    createEffect(() => {
+      console.log('Popup visibility state changed', popup.vis);
+    });
+  }
 
   return (
     <div class="flex h-screen">
@@ -208,7 +319,124 @@ const App: Component = () => {
             </div>
 
             <Show when={activeTab() === 'tracon'}>
-              <div>HA</div>
+              {/*Temporary select for SFOW/SFOE*/}
+              <div>
+                <span class="block text-md text-white mb-1">Bay Flow</span>
+                <Select
+                  options={['SFOW', 'SFOE']}
+                  value={bayConfig()}
+                  onChange={(val) => {
+                    if (val) {
+                      setBayConfig(val);
+                    }
+                  }}
+                  disallowEmptySelection={true}
+                  itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                >
+                  <SelectTrigger aria-label="Map Style" class="w-[180px] cursor-pointer">
+                    <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent />
+                </Select>
+              </div>
+
+              <div>
+                <span class="block text-md text-white mb-1">Airport Configs</span>
+                <div class="flex flex-col space-y-2">
+                  <Select
+                    options={sfoOptions()}
+                    value={sfoConfig()}
+                    onChange={(val) => {
+                      if (val) {
+                        setSfoConfig(val);
+                      }
+                    }}
+                    disallowEmptySelection={true}
+                    itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                  >
+                    <SelectTrigger aria-label="Map Style" class="w-[180px] cursor-pointer">
+                      <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+
+                  <Select
+                    options={oakOptions()}
+                    value={oakConfig()}
+                    onChange={(val) => {
+                      if (val) {
+                        setOakConfig(val);
+                      }
+                    }}
+                    disallowEmptySelection={true}
+                    itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                  >
+                    <SelectTrigger aria-label="Map Style" class="w-[180px] cursor-pointer">
+                      <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+
+                  <Select
+                    options={sjcOptions()}
+                    value={sjcConfig()}
+                    onChange={(val) => {
+                      if (val) {
+                        setSjcConfig(val);
+                      }
+                    }}
+                    disallowEmptySelection={true}
+                    itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+                  >
+                    <SelectTrigger aria-label="Map Style" class="w-[180px] cursor-pointer">
+                      <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent />
+                  </Select>
+                </div>
+              </div>
+
+              <TraconSectorDisplayWithControls
+                airspaceGroup={'A'}
+                store={allStore}
+                setStore={setAllStore}
+                dependentOnConfig={areaA()}
+              />
+
+              <TraconSectorDisplayWithControls
+                airspaceGroup={'B'}
+                store={allStore}
+                setStore={setAllStore}
+                dependentOnConfig={areaBC()}
+              />
+
+              <TraconSectorDisplayWithControls
+                airspaceGroup={'C'}
+                store={allStore}
+                setStore={setAllStore}
+                dependentOnConfig={areaBC()}
+              />
+
+              <TraconSectorDisplayWithControls
+                airspaceGroup={'D'}
+                store={allStore}
+                setStore={setAllStore}
+                dependentOnConfig={areaD()}
+              />
+
+              <TraconSectorDisplayWithControls
+                airspaceGroup={'SMF'}
+                airspaceConfigOptions={['SMFS', 'SMFN']}
+                store={allStore}
+                setStore={setAllStore}
+              />
+
+              <TraconSectorDisplayWithControls
+                airspaceGroup={'RNO'}
+                airspaceConfigOptions={['RNOS', 'RNON']}
+                store={allStore}
+                setStore={setAllStore}
+              />
             </Show>
             <Show when={activeTab() === 'center'}>
               <SectorDisplayWithControls airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
@@ -247,7 +475,9 @@ const App: Component = () => {
           cursorStyle={cursor()}
         >
           <BaseMaps persistedMapsState={persistedBaseMaps} mountedMapsState={mountedBaseMaps} />
-          <GeojsonPolySources sources={sources} />
+          <TraconGeojsonPolySources sources={sources} />
+          <TraconGeojsonPolyLayers displayStateStore={allStore} allPolys={POLY_DEFINITIONS} />
+          <GeojsonPolySources sources={centerSources} />
           <GeojsonPolyLayers displayStateStore={allStore} />
           <ArrivalPoints arrivals={displayedArrivals()} />
         </MapGL>

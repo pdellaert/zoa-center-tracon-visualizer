@@ -52,6 +52,7 @@ export type FillPaint = FillLayerSpecification['paint'];
 export interface AppDisplayState {
   updateCount: number;
   centerDisplayStates: CenterAirspaceDisplayState[];
+  areaDisplayStates: AirspaceDisplayState[];
 }
 
 ///////////////////////////////////////////////////

@@ -1,7 +1,17 @@
-import { RgbaDecimal } from "../types";
-import { GeoJSONFeature } from "mapbox-gl";
-import colorString from "color-string";
-import { FillPaint } from "~/types.ts";
+import { RgbaDecimal } from '../types';
+import { GeoJSONFeature } from 'mapbox-gl';
+import colorString from 'color-string';
+import { FillPaint, AreaPolys } from '~/types.ts';
+
+const getGeojsonSources = (areaConfig: AreaPolys) =>
+  areaConfig.sectorConfigs.flatMap((sectorConfig) =>
+    sectorConfig.configPolyUrls.flatMap((polyDef) =>
+      polyDef.configs.map((config) => ({
+        id: `${sectorConfig.sectorName}_${config}`,
+        url: polyDef.url,
+      })),
+    ),
+  );
 
 const getUniqueLayers = (features: GeoJSONFeature[]) => {
   const uniqueIds = new Set();
@@ -20,12 +30,9 @@ const getUniqueLayers = (features: GeoJSONFeature[]) => {
 };
 
 const comparePolyAlts = (p1: mapboxgl.MapboxGeoJSONFeature, p2: mapboxgl.MapboxGeoJSONFeature) => {
-  if (typeof p1.properties?.minAlt === "undefined" && typeof p2.properties?.minAlt === "undefined")
-    return 0;
-  if (typeof p1.properties?.minAlt === "undefined" && typeof p2.properties?.minAlt !== "undefined")
-    return -1;
-  if (typeof p1.properties?.minAlt !== "undefined" && typeof p2.properties?.minAlt === "undefined")
-    return 1;
+  if (typeof p1.properties?.minAlt === 'undefined' && typeof p2.properties?.minAlt === 'undefined') return 0;
+  if (typeof p1.properties?.minAlt === 'undefined' && typeof p2.properties?.minAlt !== 'undefined') return -1;
+  if (typeof p1.properties?.minAlt !== 'undefined' && typeof p2.properties?.minAlt === 'undefined') return 1;
   if (p1.properties?.minAlt == p2.properties?.minAlt) {
     return p2.properties?.maxAlt - p1.properties?.maxAlt;
   }
@@ -34,14 +41,14 @@ const comparePolyAlts = (p1: mapboxgl.MapboxGeoJSONFeature, p2: mapboxgl.MapboxG
 
 const getFillColor = (paint: FillPaint | null | undefined): string => {
   if (paint === null || paint === undefined) {
-    return "#4b5563"; // Tailwind default gray-600;
+    return '#4b5563'; // Tailwind default gray-600;
   }
-  let c = paint["fill-color"] as unknown as RgbaDecimal;
+  let c = paint['fill-color'] as unknown as RgbaDecimal;
   let hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
   if (hex) {
     return hex;
   } else {
-    return "#4b5563";
+    return '#4b5563';
   }
 };
 
@@ -50,8 +57,8 @@ const isTransparentFill = (paint: FillPaint | undefined | null): boolean => {
     return true;
   }
 
-  let c = paint["fill-color"] as unknown as RgbaDecimal;
+  let c = paint['fill-color'] as unknown as RgbaDecimal;
   return c.a === 0;
 };
 
-export { getUniqueLayers, comparePolyAlts, getFillColor, isTransparentFill };
+export { getUniqueLayers, comparePolyAlts, getFillColor, isTransparentFill, getGeojsonSources };
