@@ -52,7 +52,7 @@ export type FillPaint = FillLayerSpecification['paint'];
 export interface AppDisplayState {
   updateCount: number;
   centerDisplayStates: CenterAirspaceDisplayState[];
-  areaDisplayStates: AirspaceDisplayState[];
+  areaDisplayStates: TraconAirspaceDisplayState[];
 }
 
 ///////////////////////////////////////////////////
@@ -83,13 +83,13 @@ export interface CenterAirspaceDisplayState {
 ///////////////////////////////////////////////////
 // Tracon interfaces
 ///////////////////////////////////////////////////
-export type AirspaceConfigDependentGroup = 'RNO' | 'SMF' | 'A' | 'B' | 'C' | 'D';
+export type TraconAirspaceConfigDependentGroup = 'RNO' | 'SMF' | 'A' | 'B' | 'C' | 'D';
 
-export type AirspaceConfig = 'RNON' | 'RNOS' | 'SMFN' | 'SMFS' | 'SFOW' | 'SFOE' | 'SFO10' | 'OAKE' | 'SJCE' | '';
+export type TraconAirspaceConfig = 'RNON' | 'RNOS' | 'SMFN' | 'SMFS' | 'SFOW' | 'SFOE' | 'SFO10' | 'OAKE' | 'SJCE' | '';
 
-export type AirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';
+export type TraconAirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';
 
-export type SectorName =
+export type TraconSectorName =
   | 'Nugget'
   | 'Silver'
   | 'Elkhorn'
@@ -110,41 +110,41 @@ export type SectorName =
   | 'Niles'
   | 'Woodside';
 
-export interface AirspaceConfigWithPolys {
-  sectorName: SectorName;
+export interface TraconAirspaceConfigWithPolys {
+  sectorName: TraconSectorName;
   defaultColor: string;
   configPolyUrls: {
-    configs: AirspaceConfig[];
+    configs: TraconAirspaceConfig[];
     url: string;
   }[];
 }
 
-export interface AreaPolys {
-  name: AirspaceConfigDependentGroup;
-  defaultConfig: AirspaceConfig;
-  possibleConfigs: AirspaceConfig[];
-  sectorConfigs: AirspaceConfigWithPolys[];
+export interface TraconAreaPolys {
+  name: TraconAirspaceConfigDependentGroup;
+  defaultConfig: TraconAirspaceConfig;
+  possibleConfigs: TraconAirspaceConfig[];
+  sectorConfigs: TraconAirspaceConfigWithPolys[];
 }
 
-export interface AirspaceDisplayState {
-  name: AirspaceConfigDependentGroup;
-  selectedConfig: AirspaceConfig;
-  sectors: SectorDisplayState[];
+export interface TraconAirspaceDisplayState {
+  name: TraconAirspaceConfigDependentGroup;
+  selectedConfig: TraconAirspaceConfig;
+  sectors: TraconSectorDisplayState[];
 }
 
 export interface TraconAppDisplayState {
   updateCount: number;
-  areaDisplayStates: AirspaceDisplayState[];
+  areaDisplayStates: TraconAirspaceDisplayState[];
 }
 
-export interface PolyDefinition {
-  name: AirspaceConfigDependentGroup;
-  polys: AreaPolys;
+export interface TraconPolyDefinition {
+  name: TraconAirspaceConfigDependentGroup;
+  polys: TraconAreaPolys;
 }
 
-export interface SectorDisplayState {
-  name: SectorName;
-  parentAreaName: AirspaceConfigDependentGroup;
+export interface TraconSectorDisplayState {
+  name: TraconSectorName;
+  parentAreaName: TraconAirspaceConfigDependentGroup;
   isDisplayed: boolean;
   color: string;
 }

@@ -4,7 +4,7 @@ import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/default
 import { Section, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui-core';
 import { MapStyleSelector } from '~/components/MapStyleSelector.tsx';
 import { createStore, produce } from 'solid-js/store';
-import { BASE_MAPS, CENTER_POLY_DEFINITIONS, POLY_DEFINITIONS } from '~/config.ts';
+import { BASE_MAPS, CENTER_POLY_DEFINITIONS, TRACON_POLY_DEFINITIONS } from '~/config.ts';
 import {
   CenterAirspaceDisplayState,
   AppDisplayState,
@@ -15,10 +15,10 @@ import {
   PopupState,
   Settings,
   ArrivalProcedure,
-  AirspaceConfig,
-  AirportConfig,
-  AreaPolys,
-  AirspaceDisplayState,
+  TraconAirspaceConfig,
+  TraconAirportConfig,
+  TraconAreaPolys,
+  TraconAirspaceDisplayState,
 } from '~/types.ts';
 import { Checkbox } from '~/components/ui-core/Checkbox.tsx';
 import { Footer } from '~/components/Footer.tsx';
@@ -29,8 +29,8 @@ import MapGL from 'solid-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { BaseMaps } from '~/components/BaseMaps.tsx';
-import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
-import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
+import { CenterGeojsonPolyLayers } from '~/components/CenterGeojsonPolyLayers.tsx';
+import { CenterGeojsonPolySources } from '~/components/CenterGeojsonPolySources.tsx';
 import { TraconGeojsonPolyLayers } from '~/components/TraconGeojsonPolyLayers.tsx';
 import { TraconGeojsonPolySources } from '~/components/TraconGeojsonPolySources.tsx';
 import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
@@ -43,7 +43,7 @@ import { InfoPopup } from '~/components/InfoPopup.tsx';
 import { ProceduresDialog } from '~/components/ProceduresDialog.tsx';
 import { ArrivalPoints } from '~/components/ArrivalPoints.tsx';
 
-const createDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplayState => ({
+const createCenterDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplayState => ({
   name: area.name,
   sectors: area.sectors.map((s) => ({
     name: s.sectorName,
@@ -52,7 +52,7 @@ const createDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplaySt
   })),
 });
 
-const createAreaDefaultState = (config: AreaPolys): AirspaceDisplayState => ({
+const createTraconDefaultState = (config: TraconAreaPolys): TraconAirspaceDisplayState => ({
   name: config.name,
   selectedConfig: config.defaultConfig,
   sectors: config.sectorConfigs.map((c) => ({
@@ -100,15 +100,15 @@ const App: Component = () => {
     })),
   );
 
-  const sources = POLY_DEFINITIONS.flatMap((p) => getGeojsonSources(p.polys));
+  const sources = TRACON_POLY_DEFINITIONS.flatMap((p) => getGeojsonSources(p.polys));
 
   const [activeTab, setActiveTab] = createSignal<'tracon' | 'center'>('tracon');
 
   const [allStore, setAllStore] = makePersisted(
     createStore<AppDisplayState>({
       updateCount: 0,
-      centerDisplayStates: CENTER_POLY_DEFINITIONS.map(createDefaultState),
-      areaDisplayStates: POLY_DEFINITIONS.map((p) => createAreaDefaultState(p.polys)),
+      centerDisplayStates: CENTER_POLY_DEFINITIONS.map(createCenterDefaultState),
+      areaDisplayStates: TRACON_POLY_DEFINITIONS.map((p) => createTraconDefaultState(p.polys)),
     }),
     { name: 'currentDisplay' },
   );
@@ -169,16 +169,16 @@ const App: Component = () => {
     });
   };
 
-  const [bayConfig, setBayConfig] = makePersisted(createSignal<AirspaceConfig>('SFOW'), {
+  const [bayConfig, setBayConfig] = makePersisted(createSignal<TraconAirspaceConfig>('SFOW'), {
     name: 'bayConfig',
   });
-  const [sfoConfig, setSfoConfig] = makePersisted(createSignal<AirportConfig>('SFOW'), {
+  const [sfoConfig, setSfoConfig] = makePersisted(createSignal<TraconAirportConfig>('SFOW'), {
     name: 'sfoConfig',
   });
-  const [oakConfig, setOakConfig] = makePersisted(createSignal<AirportConfig>('OAKW'), {
+  const [oakConfig, setOakConfig] = makePersisted(createSignal<TraconAirportConfig>('OAKW'), {
     name: 'oakConfig',
   });
-  const [sjcConfig, setSjcConfig] = makePersisted(createSignal<AirportConfig>('SJCW'), {
+  const [sjcConfig, setSjcConfig] = makePersisted(createSignal<TraconAirportConfig>('SJCW'), {
     name: 'sjcConfig',
   });
 
@@ -195,7 +195,7 @@ const App: Component = () => {
   const oakOptions = createMemo(() => (bayConfig() === 'SFOW' ? ['OAKW', 'OAKE'] : ['OAKE']));
   const sjcOptions = createMemo(() => (bayConfig() === 'SFOW' ? ['SJCW', 'SJCE'] : ['SJCE']));
 
-  const areaA: Accessor<AirspaceConfig> = createMemo(() => {
+  const areaA: Accessor<TraconAirspaceConfig> = createMemo(() => {
     if (bayConfig() === 'SFOW') {
       return sjcConfig() === 'SJCE' ? 'SJCE' : 'SFOW';
     } else {
@@ -203,7 +203,7 @@ const App: Component = () => {
     }
   });
 
-  const areaBC: Accessor<AirspaceConfig> = createMemo(() => {
+  const areaBC: Accessor<TraconAirspaceConfig> = createMemo(() => {
     if (bayConfig() === 'SFOW') {
       return oakConfig() === 'OAKE' ? 'OAKE' : 'SFOW';
     } else {
@@ -215,7 +215,7 @@ const App: Component = () => {
     }
   });
 
-  const areaD: Accessor<AirspaceConfig> = createMemo(() => {
+  const areaD: Accessor<TraconAirspaceConfig> = createMemo(() => {
     if (bayConfig() === 'SFOW') {
       return oakConfig() === 'OAKE' ? 'OAKE' : 'SFOW';
     } else {
@@ -476,9 +476,9 @@ const App: Component = () => {
         >
           <BaseMaps persistedMapsState={persistedBaseMaps} mountedMapsState={mountedBaseMaps} />
           <TraconGeojsonPolySources sources={sources} />
-          <TraconGeojsonPolyLayers displayStateStore={allStore} allPolys={POLY_DEFINITIONS} />
-          <GeojsonPolySources sources={centerSources} />
-          <GeojsonPolyLayers displayStateStore={allStore} />
+          <TraconGeojsonPolyLayers displayStateStore={allStore} allPolys={TRACON_POLY_DEFINITIONS} />
+          <CenterGeojsonPolySources sources={centerSources} />
+          <CenterGeojsonPolyLayers displayStateStore={allStore} />
           <ArrivalPoints arrivals={displayedArrivals()} />
         </MapGL>
       </div>

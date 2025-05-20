@@ -1,9 +1,9 @@
 import { RgbaDecimal } from '../types';
 import { GeoJSONFeature } from 'mapbox-gl';
 import colorString from 'color-string';
-import { FillPaint, AreaPolys } from '~/types.ts';
+import { FillPaint, TraconAreaPolys } from '~/types.ts';
 
-const getGeojsonSources = (areaConfig: AreaPolys) =>
+const getGeojsonSources = (areaConfig: TraconAreaPolys) =>
   areaConfig.sectorConfigs.flatMap((sectorConfig) =>
     sectorConfig.configPolyUrls.flatMap((polyDef) =>
       polyDef.configs.map((config) => ({

@@ -4,16 +4,16 @@ import { Layer } from 'solid-map-gl';
 import { createStore, produce } from 'solid-js/store';
 import { logIfDev } from '~/lib/dev.ts';
 
-interface GeojsonPolyLayersProps {
+interface CenterGeojsonPolyLayersProps {
   displayStateStore: AppDisplayState;
 }
 
-interface MapboxDisplayState extends CenterDisplayState {
+interface CenterMapboxDisplayState extends CenterDisplayState {
   isDisplayedTransparent: boolean;
   isDisplayedColor: boolean;
 }
 
-const createStartingLayers = (allPolys: AppDisplayState): MapboxDisplayState[] =>
+const createStartingLayers = (allPolys: AppDisplayState): CenterMapboxDisplayState[] =>
   allPolys.centerDisplayStates.flatMap((a) =>
     a.sectors.map((s) => ({
       name: s.name,
@@ -24,7 +24,7 @@ const createStartingLayers = (allPolys: AppDisplayState): MapboxDisplayState[] =
     })),
   );
 
-export const GeojsonPolyLayers: Component<GeojsonPolyLayersProps> = (props) => {
+export const CenterGeojsonPolyLayers: Component<CenterGeojsonPolyLayersProps> = (props) => {
   const startingLayers = createStartingLayers(props.displayStateStore);
   logIfDev('Starting map layers', startingLayers);
   const [allLayers, setAllLayers] = createStore(startingLayers);

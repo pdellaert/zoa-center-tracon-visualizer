@@ -1,18 +1,18 @@
-import { Component, For } from "solid-js";
-import { Source } from "solid-map-gl";
+import { Component, For } from 'solid-js';
+import { Source } from 'solid-map-gl';
 
-interface GeojsonPolySourcesProps {
+interface CenterGeojsonPolySourcesProps {
   sources: { id: string; url: string }[];
 }
 
-export const GeojsonPolySources: Component<GeojsonPolySourcesProps> = (props) => {
+export const CenterGeojsonPolySources: Component<CenterGeojsonPolySourcesProps> = (props) => {
   return (
     <For each={props.sources}>
       {(source) => (
         <Source
           id={source.id}
           source={{
-            type: "geojson",
+            type: 'geojson',
             data: source.url,
           }}
         ></Source>

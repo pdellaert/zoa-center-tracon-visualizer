@@ -1,16 +1,16 @@
 import { Component, createEffect, For, Show } from 'solid-js';
-import { AirspaceConfig, AirspaceConfigDependentGroup, AppDisplayState } from '../types';
+import { TraconAirspaceConfig, TraconAirspaceConfigDependentGroup, AppDisplayState } from '../types';
 import { SetStoreFunction } from 'solid-js/store';
 import { Select } from '@kobalte/core/select';
 import { SelectContent, SelectItem, SelectTrigger, SelectValue, Checkbox } from './ui-core';
 import { cn } from '../lib/utils';
 
 interface TraconSectorDisplayWithControlsProps {
-  airspaceGroup: AirspaceConfigDependentGroup;
-  airspaceConfigOptions?: AirspaceConfig[];
+  airspaceGroup: TraconAirspaceConfigDependentGroup;
+  airspaceConfigOptions?: TraconAirspaceConfig[];
   store: AppDisplayState;
   setStore: SetStoreFunction<AppDisplayState>;
-  dependentOnConfig?: AirspaceConfig;
+  dependentOnConfig?: TraconAirspaceConfig;
 }
 
 export const TraconSectorDisplayWithControls: Component<TraconSectorDisplayWithControlsProps> = (props) => {

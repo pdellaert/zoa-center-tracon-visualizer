@@ -1,4 +1,10 @@
-import { AirspaceConfig, AppDisplayState, PolyDefinition, SectorDisplayState, SectorName } from '~/types';
+import {
+  TraconAirspaceConfig,
+  AppDisplayState,
+  TraconPolyDefinition,
+  TraconSectorDisplayState,
+  TraconSectorName,
+} from '~/types';
 import { Component, createEffect, For, Show } from 'solid-js';
 import { Layer } from 'solid-map-gl';
 import { createStore, produce } from 'solid-js/store';
@@ -6,21 +12,21 @@ import { logIfDev } from '~/lib/dev';
 
 interface GeojsonPolyLayersProps {
   displayStateStore: AppDisplayState;
-  allPolys: PolyDefinition[];
+  allPolys: TraconPolyDefinition[];
 }
 
-interface DisplayState extends SectorDisplayState {
-  config: AirspaceConfig;
+interface DisplayState extends TraconSectorDisplayState {
+  config: TraconAirspaceConfig;
 }
 
-interface MapboxDisplayState extends SectorDisplayState {
-  config: AirspaceConfig;
+interface MapboxDisplayState extends TraconSectorDisplayState {
+  config: TraconAirspaceConfig;
   hasBeenModified: boolean;
   isDisplayedTransparent: boolean;
   isDisplayedColor: boolean;
 }
 
-const createStartingLayers = (allPolys: PolyDefinition[]): MapboxDisplayState[] =>
+const createStartingLayers = (allPolys: TraconPolyDefinition[]): MapboxDisplayState[] =>
   allPolys.flatMap((polyDef) =>
     polyDef.polys.sectorConfigs.flatMap((sector) =>
       sector.configPolyUrls.flatMap((polyUrl) =>
@@ -48,7 +54,7 @@ export const TraconGeojsonPolyLayers: Component<GeojsonPolyLayersProps> = (props
       area.sectors.map((sector) => ({ ...sector, config: area.selectedConfig })),
     );
 
-    let displayMap: Map<SectorName, DisplayState> = new Map();
+    let displayMap: Map<TraconSectorName, DisplayState> = new Map();
     displayFlat.forEach((s) => displayMap.set(s.name, s));
 
     logIfDev('Starting update of layers');
