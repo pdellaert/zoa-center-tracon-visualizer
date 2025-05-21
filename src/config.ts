@@ -100,6 +100,8 @@ import oakeSutro from './polys/tracon/d/oake-sutro.geojson';
 ///////////////////////////////////////////////////
 // Base Maps
 ///////////////////////////////////////////////////
+export const NAVDATA_API_URL = 'https://navdata.oakartcc.org';
+
 export const MAP_STYLES: MapStyle[] = [
   DEFAULT_MAP_STYLE,
   {
@@ -144,7 +146,7 @@ export const BASE_MAPS: BaseMap[] = [
 ///////////////////////////////////////////////////
 // Center Maps
 ///////////////////////////////////////////////////
-export const CENTER_AREA_NORTH_POLYS: CenterAreaDefinition = {
+const CENTER_AREA_NORTH_POLYS: CenterAreaDefinition = {
   name: 'Area North',
   sectors: [
     {
@@ -180,7 +182,7 @@ export const CENTER_AREA_NORTH_POLYS: CenterAreaDefinition = {
   ],
 };
 
-export const CENTER_AREA_EAST_POLYS: CenterAreaDefinition = {
+const CENTER_AREA_EAST_POLYS: CenterAreaDefinition = {
   name: 'Area East',
   sectors: [
     {
@@ -216,7 +218,7 @@ export const CENTER_AREA_EAST_POLYS: CenterAreaDefinition = {
   ],
 };
 
-export const CENTER_PAC_NORTH_POLYS: CenterAreaDefinition = {
+const CENTER_PAC_NORTH_POLYS: CenterAreaDefinition = {
   name: 'Pac North',
   sectors: [
     {
@@ -232,7 +234,7 @@ export const CENTER_PAC_NORTH_POLYS: CenterAreaDefinition = {
   ],
 };
 
-export const CENTER_PAC_SOUTH_POLYS: CenterAreaDefinition = {
+const CENTER_PAC_SOUTH_POLYS: CenterAreaDefinition = {
   name: 'Pac South',
   sectors: [
     {
@@ -248,7 +250,7 @@ export const CENTER_PAC_SOUTH_POLYS: CenterAreaDefinition = {
   ],
 };
 
-export const CENTER_AREA_SOUTH_POLYS: CenterAreaDefinition = {
+const CENTER_AREA_SOUTH_POLYS: CenterAreaDefinition = {
   name: 'Area South',
   sectors: [
     {
@@ -649,5 +651,3 @@ export const TRACON_POLY_DEFINITIONS: TraconPolyDefinition[] = [
   { name: 'C', polys: C_POLYS },
   { name: 'D', polys: D_POLYS },
 ];
-
-export const NAVDATA_API_URL = 'https://navdata.oakartcc.org';

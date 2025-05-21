@@ -1,11 +1,11 @@
 import { Component, For } from 'solid-js';
 import { Source } from 'solid-map-gl';
 
-interface TraconGeojsonPolySourcesProps {
+interface GeojsonPolySourcesProps {
   sources: { id: string; url: string }[];
 }
 
-export const TraconGeojsonPolySources: Component<TraconGeojsonPolySourcesProps> = (props) => {
+export const GeojsonPolySources: Component<GeojsonPolySourcesProps> = (props) => {
   return (
     <For each={props.sources}>
       {(source) => (

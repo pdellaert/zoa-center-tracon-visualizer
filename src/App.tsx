@@ -30,9 +30,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { BaseMaps } from '~/components/BaseMaps.tsx';
 import { CenterGeojsonPolyLayers } from '~/components/CenterGeojsonPolyLayers.tsx';
-import { CenterGeojsonPolySources } from '~/components/CenterGeojsonPolySources.tsx';
+import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
 import { TraconGeojsonPolyLayers } from '~/components/TraconGeojsonPolyLayers.tsx';
-import { TraconGeojsonPolySources } from '~/components/TraconGeojsonPolySources.tsx';
 import { CenterSectorDisplayWithControls } from '~/components/CenterSectorDisplayWithControls.tsx';
 import { TraconSectorDisplayWithControls } from '~/components/TraconSectorDisplayWithControls.tsx';
 import { SettingsDialog } from '~/components/SettingsDialog.tsx';
@@ -100,7 +99,9 @@ const App: Component = () => {
     })),
   );
 
-  const sources = TRACON_POLY_DEFINITIONS.flatMap((p) => getGeojsonSources(p.polys));
+  const traconSources = TRACON_POLY_DEFINITIONS.flatMap((p) => getGeojsonSources(p.polys));
+
+  const allSources = [...centerSources, ...traconSources];
 
   const [activeTab, setActiveTab] = createSignal<'tracon' | 'center'>('tracon');
 
@@ -475,9 +476,8 @@ const App: Component = () => {
           cursorStyle={cursor()}
         >
           <BaseMaps persistedMapsState={persistedBaseMaps} mountedMapsState={mountedBaseMaps} />
-          <TraconGeojsonPolySources sources={sources} />
+          <GeojsonPolySources sources={allSources} />
           <TraconGeojsonPolyLayers displayStateStore={allStore} allPolys={TRACON_POLY_DEFINITIONS} />
-          <CenterGeojsonPolySources sources={centerSources} />
           <CenterGeojsonPolyLayers displayStateStore={allStore} />
           <ArrivalPoints arrivals={displayedArrivals()} />
         </MapGL>
