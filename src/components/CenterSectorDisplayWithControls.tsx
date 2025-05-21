@@ -10,7 +10,7 @@ interface SectorDisplayWithControlsProps {
   setStore: SetStoreFunction<AppDisplayState>;
 }
 
-export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
+export const CenterSectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
   const thisAirspaceGroup = createMemo(() =>
     props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup),
   );

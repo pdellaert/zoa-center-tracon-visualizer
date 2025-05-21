@@ -33,7 +33,7 @@ import { CenterGeojsonPolyLayers } from '~/components/CenterGeojsonPolyLayers.ts
 import { CenterGeojsonPolySources } from '~/components/CenterGeojsonPolySources.tsx';
 import { TraconGeojsonPolyLayers } from '~/components/TraconGeojsonPolyLayers.tsx';
 import { TraconGeojsonPolySources } from '~/components/TraconGeojsonPolySources.tsx';
-import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
+import { CenterSectorDisplayWithControls } from '~/components/CenterSectorDisplayWithControls.tsx';
 import { TraconSectorDisplayWithControls } from '~/components/TraconSectorDisplayWithControls.tsx';
 import { SettingsDialog } from '~/components/SettingsDialog.tsx';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
@@ -439,15 +439,15 @@ const App: Component = () => {
               />
             </Show>
             <Show when={activeTab() === 'center'}>
-              <SectorDisplayWithControls airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
+              <CenterSectorDisplayWithControls airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls airspaceGroup={'Area East'} store={allStore} setStore={setAllStore} />
+              <CenterSectorDisplayWithControls airspaceGroup={'Area East'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls airspaceGroup={'Area South'} store={allStore} setStore={setAllStore} />
+              <CenterSectorDisplayWithControls airspaceGroup={'Area South'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls airspaceGroup={'Pac North'} store={allStore} setStore={setAllStore} />
+              <CenterSectorDisplayWithControls airspaceGroup={'Pac North'} store={allStore} setStore={setAllStore} />
 
-              <SectorDisplayWithControls airspaceGroup={'Pac South'} store={allStore} setStore={setAllStore} />
+              <CenterSectorDisplayWithControls airspaceGroup={'Pac South'} store={allStore} setStore={setAllStore} />
             </Show>
           </Section>
         </div>
