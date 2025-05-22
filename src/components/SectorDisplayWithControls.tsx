@@ -15,117 +15,12 @@ interface SectorDisplayWithControlsProps {
   dependentOnConfig?: TraconAirspaceConfig;
 }
 
-// Original CenterSectorDisplayWithControls implementation for reference
-export const CenterSectorDisplayWithControls: Component<Omit<SectorDisplayWithControlsProps, 'displayType' | 'airspaceConfigOptions' | 'dependentOnConfig'>> = (props) => {
-  const thisAirspaceGroup = createMemo(() =>
-    props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup),
-  );
-
-  const checkedSectors = createMemo(() => thisAirspaceGroup()?.sectors.filter((s) => s.isDisplayed));
-
-  const showCheckAll = createMemo(() => {
-    const checked = checkedSectors();
-    const total = thisAirspaceGroup()?.sectors;
-    if (checked === undefined || total === undefined) {
-      return false;
-    }
-    return checked.length < total.length;
-  });
-
-  const showUncheckAll = createMemo(() => {
-    const checked = checkedSectors();
-    if (checked === undefined) {
-      return false;
-    }
-    return checked.length > 0;
-  });
-
-  return (
-    <div>
-      <div class={cn(['flex flex-col space-y-1 mt-2'])}>
-        <div class="text-white">{props.airspaceGroup}</div>
-        <div class="flex flex-row space-x-2 cursor-pointer">
-          <Show when={showCheckAll()}>
-            <div
-              class="text-gray-400 hover:text-gray-200 transition text-xs"
-              onClick={() =>
-                props.setStore(
-                  'centerDisplayStates',
-                  (a) => a.name === props.airspaceGroup,
-                  'sectors',
-                  (_s) => true,
-                  'isDisplayed',
-                  true,
-                )
-              }
-            >
-              Check all
-            </div>
-          </Show>
-          <Show when={showUncheckAll()}>
-            <div
-              class="text-gray-400 hover:text-gray-200 transition text-xs"
-              onClick={() =>
-                props.setStore(
-                  'centerDisplayStates',
-                  (a) => a.name === props.airspaceGroup,
-                  'sectors',
-                  (_s) => true,
-                  'isDisplayed',
-                  false,
-                )
-              }
-            >
-              Uncheck all
-            </div>
-          </Show>
-        </div>
-        <For each={props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup)?.sectors}>
-          {(sector) => (
-            <div class="flex justify-between">
-              <Checkbox
-                label={sector.name}
-                checked={sector.isDisplayed}
-                onChange={(val) => {
-                  props.setStore(
-                    'centerDisplayStates',
-                    (a) => a.name === props.airspaceGroup,
-                    'sectors',
-                    (s) => s.name === sector.name,
-                    'isDisplayed',
-                    val,
-                  );
-                  props.setStore('updateCount', (prev) => prev + 1);
-                }}
-              />
-              <input
-                type="color"
-                value={sector.color}
-                class="w-6 h-6 mr-2"
-                onChange={(e) => {
-                  props.setStore(
-                    'centerDisplayStates',
-                    (a) => a.name === props.airspaceGroup,
-                    'sectors',
-                    (s) => s.name === sector.name,
-                    'color',
-                    e.target.value,
-                  );
-                  props.setStore('updateCount', (prev) => prev + 1);
-                }}
-              />
-            </div>
-          )}
-        </For>
-      </div>
-    </div>
-  );
-};
-
-// Original TraconSectorDisplayWithControls implementation for reference
-export const TraconSectorDisplayWithControls: Component<Omit<SectorDisplayWithControlsProps, 'displayType'> & { airspaceGroup: TraconAirspaceConfigDependentGroup }> = (props) => {
-  // TODO -- need to make sure this works
-  if (props.dependentOnConfig) {
+// Unified implementation for both Center and Tracon sector displays
+export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
+  const isCenter = props.displayType === 'center';
+  
+  // Apply dependent configuration for Tracon if specified
+  if (!isCenter && props.dependentOnConfig) {
     createEffect(() => {
       props.setStore(
         'areaDisplayStates',
@@ -136,63 +31,169 @@ export const TraconSectorDisplayWithControls: Component<Omit<SectorDisplayWithCo
     });
   }
 
+  // Common memoized values for both types
+  const thisAirspaceGroup = createMemo(() => {
+    return isCenter 
+      ? props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup)
+      : props.store.areaDisplayStates.find((a) => a.name === props.airspaceGroup);
+  });
+
+  const sectors = createMemo(() => thisAirspaceGroup()?.sectors);
+  const checkedSectors = createMemo(() => sectors()?.filter((s) => s.isDisplayed));
+
+  // These are only used for Center displays, but we can compute them regardless
+  const showCheckAll = createMemo(() => {
+    if (!isCenter) return false;
+    const checked = checkedSectors();
+    const total = sectors();
+    if (checked === undefined || total === undefined) {
+      return false;
+    }
+    return checked.length < total.length;
+  });
+
+  const showUncheckAll = createMemo(() => {
+    if (!isCenter) return false;
+    const checked = checkedSectors();
+    if (checked === undefined) {
+      return false;
+    }
+    return checked.length > 0;
+  });
+
+  // Common handler for checkbox changes
+  const handleCheckboxChange = (sectorName: string, value: boolean) => {
+    if (isCenter) {
+      props.setStore(
+        'centerDisplayStates',
+        (a) => a.name === props.airspaceGroup,
+        'sectors',
+        (s) => s.name === sectorName,
+        'isDisplayed',
+        value,
+      );
+    } else {
+      props.setStore(
+        'areaDisplayStates',
+        (a) => a.name === props.airspaceGroup,
+        'sectors',
+        (s) => s.name === sectorName,
+        'isDisplayed',
+        value,
+      );
+    }
+    props.setStore('updateCount', (prev) => prev + 1);
+  };
+
+  // Common handler for color changes
+  const handleColorChange = (sectorName: string, color: string) => {
+    if (isCenter) {
+      props.setStore(
+        'centerDisplayStates',
+        (a) => a.name === props.airspaceGroup,
+        'sectors',
+        (s) => s.name === sectorName,
+        'color',
+        color,
+      );
+    } else {
+      props.setStore(
+        'areaDisplayStates',
+        (a) => a.name === props.airspaceGroup,
+        'sectors',
+        (s) => s.name === sectorName,
+        'color',
+        color,
+      );
+    }
+    props.setStore('updateCount', (prev) => prev + 1);
+  };
+
+  // Handler for Check/Uncheck all (only used in Center displays)
+  const handleToggleAll = (value: boolean) => {
+    if (isCenter) {
+      props.setStore(
+        'centerDisplayStates',
+        (a) => a.name === props.airspaceGroup,
+        'sectors',
+        (_s) => true,
+        'isDisplayed',
+        value,
+      );
+    }
+  };
+
   return (
     <div>
-      <Show when={typeof props.dependentOnConfig === 'undefined'}>
-        <Select
-          class="mt-4"
-          options={props.airspaceConfigOptions ?? []}
-          value={props.store.areaDisplayStates.find((a) => a.name === props.airspaceGroup)?.selectedConfig}
-          onChange={(val) => {
-            if (val) {
-              props.setStore('areaDisplayStates', (a) => a.name === props.airspaceGroup, 'selectedConfig', val);
-              props.setStore('updateCount', (prev) => prev + 1);
-            }
-          }}
-          disallowEmptySelection={true}
-          itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
-        >
-          <SelectTrigger aria-label="Map Style" class="w-[180px] cursor-pointer">
-            <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
-          </SelectTrigger>
-          <SelectContent />
-        </Select>
-      </Show>
+      {/* Configuration selector (Tracon only) */}
+      {!isCenter && (
+        <Show when={typeof props.dependentOnConfig === 'undefined'}>
+          <Select
+            class="mt-4"
+            options={props.airspaceConfigOptions ?? []}
+            value={!isCenter ? props.store.areaDisplayStates.find((a) => a.name === props.airspaceGroup)?.selectedConfig : undefined}
+            onChange={(val) => {
+              if (val) {
+                props.setStore('areaDisplayStates', (a) => a.name === props.airspaceGroup, 'selectedConfig', val);
+                props.setStore('updateCount', (prev) => prev + 1);
+              }
+            }}
+            disallowEmptySelection={true}
+            itemComponent={(props) => <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>}
+          >
+            <SelectTrigger aria-label="Map Style" class="w-[180px] cursor-pointer">
+              <SelectValue<string>>{(state) => state.selectedOption()}</SelectValue>
+            </SelectTrigger>
+            <SelectContent />
+          </Select>
+        </Show>
+      )}
 
-      <div class={cn(['flex flex-col space-y-1 mt-4', { 'mt-2': typeof props.dependentOnConfig === 'undefined' }])}>
-        <For each={props.store.areaDisplayStates.find((a) => a.name === props.airspaceGroup)?.sectors}>
+      {/* Common sector controls */}
+      <div class={cn([
+        'flex flex-col space-y-1', 
+        isCenter ? 'mt-2' : 'mt-4',
+        { 'mt-2': !isCenter && typeof props.dependentOnConfig === 'undefined' }
+      ])}>
+        {/* Title and Check/Uncheck all buttons (Center only) */}
+        {isCenter && (
+          <>
+            <div class="text-white">{props.airspaceGroup}</div>
+            <div class="flex flex-row space-x-2 cursor-pointer">
+              <Show when={showCheckAll()}>
+                <div
+                  class="text-gray-400 hover:text-gray-200 transition text-xs"
+                  onClick={() => handleToggleAll(true)}
+                >
+                  Check all
+                </div>
+              </Show>
+              <Show when={showUncheckAll()}>
+                <div
+                  class="text-gray-400 hover:text-gray-200 transition text-xs"
+                  onClick={() => handleToggleAll(false)}
+                >
+                  Uncheck all
+                </div>
+              </Show>
+            </div>
+          </>
+        )}
+        
+        {/* Sector list with checkboxes */}
+        <For each={sectors()}>
           {(sector) => (
             <div class="flex justify-between">
               <Checkbox
                 label={sector.name}
                 checked={sector.isDisplayed}
-                onChange={(val) => {
-                  props.setStore(
-                    'areaDisplayStates',
-                    (a) => a.name === props.airspaceGroup,
-                    'sectors',
-                    (s) => s.name === sector.name,
-                    'isDisplayed',
-                    val,
-                  );
-                  props.setStore('updateCount', (prev) => prev + 1);
-                }}
+                onChange={(val) => handleCheckboxChange(sector.name, val)}
               />
               <input
                 type="color"
                 value={sector.color}
                 class="w-6 h-6 mr-2"
-                onChange={(e) => {
-                  props.setStore(
-                    'areaDisplayStates',
-                    (a) => a.name === props.airspaceGroup,
-                    'sectors',
-                    (s) => s.name === sector.name,
-                    'color',
-                    e.target.value,
-                  );
-                  props.setStore('updateCount', (prev) => prev + 1);
-                }}
+                onChange={(e) => handleColorChange(sector.name, e.target.value)}
               />
             </div>
           )}
@@ -202,25 +203,3 @@ export const TraconSectorDisplayWithControls: Component<Omit<SectorDisplayWithCo
   );
 };
 
-// Combined component that selects the appropriate display type based on props
-export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
-  if (props.displayType === 'center') {
-    return (
-      <CenterSectorDisplayWithControls
-        airspaceGroup={props.airspaceGroup as string}
-        store={props.store}
-        setStore={props.setStore}
-      />
-    );
-  } else {
-    return (
-      <TraconSectorDisplayWithControls
-        airspaceGroup={props.airspaceGroup as TraconAirspaceConfigDependentGroup}
-        store={props.store}
-        setStore={props.setStore}
-        airspaceConfigOptions={props.airspaceConfigOptions}
-        dependentOnConfig={props.dependentOnConfig}
-      />
-    );
-  }
-};
