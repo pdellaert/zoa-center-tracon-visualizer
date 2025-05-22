@@ -362,7 +362,7 @@ const E_CA_POLYS: TraconAreaPolys = {
 };
 
 const D_POLYS: TraconAreaPolys = {
-  name: 'D',
+  name: 'Area D',
   defaultConfig: 'SFOW',
   possibleConfigs: ['SFOW', 'SFOE', 'OAKE'],
   sectorConfigs: [
@@ -406,7 +406,7 @@ const D_POLYS: TraconAreaPolys = {
 };
 
 const A_POLYS: TraconAreaPolys = {
-  name: 'A',
+  name: 'Area A',
   defaultConfig: 'SFOW',
   possibleConfigs: ['SFOW', 'SFOE', 'SJCE'],
   sectorConfigs: [
@@ -470,7 +470,7 @@ const A_POLYS: TraconAreaPolys = {
 };
 
 const C_POLYS: TraconAreaPolys = {
-  name: 'C',
+  name: 'Area C',
   defaultConfig: 'SFOW',
   possibleConfigs: ['SFOW', 'SFOE', 'SFO10', 'OAKE'],
   sectorConfigs: [
@@ -528,7 +528,7 @@ const C_POLYS: TraconAreaPolys = {
 };
 
 const B_POLYS: TraconAreaPolys = {
-  name: 'B',
+  name: 'Area B',
   defaultConfig: 'SFOW',
   possibleConfigs: ['SFOW', 'SFOE', 'SFO10', 'OAKE'],
   sectorConfigs: [
@@ -646,8 +646,8 @@ const B_POLYS: TraconAreaPolys = {
 export const TRACON_POLY_DEFINITIONS: TraconPolyDefinition[] = [
   { name: 'RNO', polys: E_NV_POLYS },
   { name: 'SMF', polys: E_CA_POLYS },
-  { name: 'A', polys: A_POLYS },
-  { name: 'B', polys: B_POLYS },
-  { name: 'C', polys: C_POLYS },
-  { name: 'D', polys: D_POLYS },
+  { name: 'Area A', polys: A_POLYS },
+  { name: 'Area B', polys: B_POLYS },
+  { name: 'Area C', polys: C_POLYS },
+  { name: 'Area D', polys: D_POLYS },
 ];

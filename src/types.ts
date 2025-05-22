@@ -83,7 +83,7 @@ export interface CenterAirspaceDisplayState {
 ///////////////////////////////////////////////////
 // Tracon interfaces
 ///////////////////////////////////////////////////
-export type TraconAirspaceConfigDependentGroup = 'RNO' | 'SMF' | 'A' | 'B' | 'C' | 'D';
+export type TraconAirspaceConfigDependentGroup = 'RNO' | 'SMF' | 'Area A' | 'Area B' | 'Area C' | 'Area D';
 
 export type TraconAirspaceConfig = 'RNON' | 'RNOS' | 'SMFN' | 'SMFS' | 'SFOW' | 'SFOE' | 'SFO10' | 'OAKE' | 'SJCE' | '';
 

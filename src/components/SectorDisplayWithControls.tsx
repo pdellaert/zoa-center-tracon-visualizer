@@ -13,6 +13,7 @@ interface SectorDisplayWithControlsProps {
   displayType: 'center' | 'tracon';
   airspaceConfigOptions?: TraconAirspaceConfig[];
   dependentOnConfig?: TraconAirspaceConfig;
+  hideHeader?: boolean; // Set to true to hide the area header (useful when it's the only area for an airport)
 }
 
 // Unified implementation for both Center and Tracon sector displays
@@ -41,9 +42,8 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
   const sectors = createMemo(() => thisAirspaceGroup()?.sectors);
   const checkedSectors = createMemo(() => sectors()?.filter((s) => s.isDisplayed));
 
-  // These are only used for Center displays, but we can compute them regardless
+  // Computed values for both display types
   const showCheckAll = createMemo(() => {
-    if (!isCenter) return false;
     const checked = checkedSectors();
     const total = sectors();
     if (checked === undefined || total === undefined) {
@@ -53,7 +53,6 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
   });
 
   const showUncheckAll = createMemo(() => {
-    if (!isCenter) return false;
     const checked = checkedSectors();
     if (checked === undefined) {
       return false;
@@ -109,7 +108,7 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
     props.setStore('updateCount', (prev) => prev + 1);
   };
 
-  // Handler for Check/Uncheck all (only used in Center displays)
+  // Handler for Check/Uncheck all (for both display types)
   const handleToggleAll = (value: boolean) => {
     if (isCenter) {
       props.setStore(
@@ -120,7 +119,17 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
         'isDisplayed',
         value,
       );
+    } else {
+      props.setStore(
+        'areaDisplayStates',
+        (a) => a.name === props.airspaceGroup,
+        'sectors',
+        (_s) => true,
+        'isDisplayed',
+        value,
+      );
     }
+    props.setStore('updateCount', (prev) => prev + 1);
   };
 
   return (
@@ -155,30 +164,32 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
         isCenter ? 'mt-2' : 'mt-4',
         { 'mt-2': !isCenter && typeof props.dependentOnConfig === 'undefined' }
       ])}>
-        {/* Title and Check/Uncheck all buttons (Center only) */}
-        {isCenter && (
-          <>
-            <div class="text-white">{props.airspaceGroup}</div>
-            <div class="flex flex-row space-x-2 cursor-pointer">
-              <Show when={showCheckAll()}>
-                <div
-                  class="text-gray-400 hover:text-gray-200 transition text-xs"
-                  onClick={() => handleToggleAll(true)}
-                >
-                  Check all
-                </div>
-              </Show>
-              <Show when={showUncheckAll()}>
-                <div
-                  class="text-gray-400 hover:text-gray-200 transition text-xs"
-                  onClick={() => handleToggleAll(false)}
-                >
-                  Uncheck all
-                </div>
-              </Show>
-            </div>
-          </>
+        {/* Title for both Center and Tracon displays (unless hidden) */}
+        {(!props.hideHeader || isCenter) && (
+          <div class="text-white">{props.airspaceGroup}</div>
         )}
+        
+        {/* Check/Uncheck all buttons */}
+        {
+          <div class="flex flex-row space-x-2 cursor-pointer">
+            <Show when={showCheckAll()}>
+              <div
+                class="text-gray-400 hover:text-gray-200 transition text-xs"
+                onClick={() => handleToggleAll(true)}
+              >
+                Check all
+              </div>
+            </Show>
+            <Show when={showUncheckAll()}>
+              <div
+                class="text-gray-400 hover:text-gray-200 transition text-xs"
+                onClick={() => handleToggleAll(false)}
+              >
+                Uncheck all
+              </div>
+            </Show>
+          </div>
+        }
         
         {/* Sector list with checkboxes */}
         <For each={sectors()}>

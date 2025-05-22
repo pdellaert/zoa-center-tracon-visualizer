@@ -398,7 +398,7 @@ const App: Component = () => {
 
               <SectorDisplayWithControls
                 displayType="tracon"
-                airspaceGroup={'A'}
+                airspaceGroup={'Area A'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaA()}
@@ -406,7 +406,7 @@ const App: Component = () => {
 
               <SectorDisplayWithControls
                 displayType="tracon"
-                airspaceGroup={'B'}
+                airspaceGroup={'Area B'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaBC()}
@@ -414,7 +414,7 @@ const App: Component = () => {
 
               <SectorDisplayWithControls
                 displayType="tracon"
-                airspaceGroup={'C'}
+                airspaceGroup={'Area C'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaBC()}
@@ -422,7 +422,7 @@ const App: Component = () => {
 
               <SectorDisplayWithControls
                 displayType="tracon"
-                airspaceGroup={'D'}
+                airspaceGroup={'Area D'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaD()}
@@ -434,6 +434,7 @@ const App: Component = () => {
                 airspaceConfigOptions={['SMFS', 'SMFN']}
                 store={allStore}
                 setStore={setAllStore}
+                hideHeader={true}
               />
 
               <SectorDisplayWithControls
@@ -442,18 +443,44 @@ const App: Component = () => {
                 airspaceConfigOptions={['RNOS', 'RNON']}
                 store={allStore}
                 setStore={setAllStore}
+                hideHeader={true}
               />
             </Show>
             <Show when={activeTab() === 'center'}>
-              <SectorDisplayWithControls displayType="center" airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls
+                displayType="center"
+                airspaceGroup={'Area North'}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-              <SectorDisplayWithControls displayType="center" airspaceGroup={'Area East'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls
+                displayType="center"
+                airspaceGroup={'Area East'}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-              <SectorDisplayWithControls displayType="center" airspaceGroup={'Area South'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls
+                displayType="center"
+                airspaceGroup={'Area South'}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-              <SectorDisplayWithControls displayType="center" airspaceGroup={'Pac North'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls
+                displayType="center"
+                airspaceGroup={'Pac North'}
+                store={allStore}
+                setStore={setAllStore}
+              />
 
-              <SectorDisplayWithControls displayType="center" airspaceGroup={'Pac South'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls
+                displayType="center"
+                airspaceGroup={'Pac South'}
+                store={allStore}
+                setStore={setAllStore}
+              />
             </Show>
           </Section>
         </div>
