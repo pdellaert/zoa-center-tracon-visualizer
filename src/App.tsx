@@ -32,8 +32,7 @@ import { BaseMaps } from '~/components/BaseMaps.tsx';
 import { CenterGeojsonPolyLayers } from '~/components/CenterGeojsonPolyLayers.tsx';
 import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
 import { TraconGeojsonPolyLayers } from '~/components/TraconGeojsonPolyLayers.tsx';
-import { CenterSectorDisplayWithControls } from '~/components/CenterSectorDisplayWithControls.tsx';
-import { TraconSectorDisplayWithControls } from '~/components/TraconSectorDisplayWithControls.tsx';
+import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
 import { SettingsDialog } from '~/components/SettingsDialog.tsx';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
 import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson.ts';
@@ -397,42 +396,48 @@ const App: Component = () => {
                 </div>
               </div>
 
-              <TraconSectorDisplayWithControls
+              <SectorDisplayWithControls
+                displayType="tracon"
                 airspaceGroup={'A'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaA()}
               />
 
-              <TraconSectorDisplayWithControls
+              <SectorDisplayWithControls
+                displayType="tracon"
                 airspaceGroup={'B'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaBC()}
               />
 
-              <TraconSectorDisplayWithControls
+              <SectorDisplayWithControls
+                displayType="tracon"
                 airspaceGroup={'C'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaBC()}
               />
 
-              <TraconSectorDisplayWithControls
+              <SectorDisplayWithControls
+                displayType="tracon"
                 airspaceGroup={'D'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={areaD()}
               />
 
-              <TraconSectorDisplayWithControls
+              <SectorDisplayWithControls
+                displayType="tracon"
                 airspaceGroup={'SMF'}
                 airspaceConfigOptions={['SMFS', 'SMFN']}
                 store={allStore}
                 setStore={setAllStore}
               />
 
-              <TraconSectorDisplayWithControls
+              <SectorDisplayWithControls
+                displayType="tracon"
                 airspaceGroup={'RNO'}
                 airspaceConfigOptions={['RNOS', 'RNON']}
                 store={allStore}
@@ -440,15 +445,15 @@ const App: Component = () => {
               />
             </Show>
             <Show when={activeTab() === 'center'}>
-              <CenterSectorDisplayWithControls airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls displayType="center" airspaceGroup={'Area North'} store={allStore} setStore={setAllStore} />
 
-              <CenterSectorDisplayWithControls airspaceGroup={'Area East'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls displayType="center" airspaceGroup={'Area East'} store={allStore} setStore={setAllStore} />
 
-              <CenterSectorDisplayWithControls airspaceGroup={'Area South'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls displayType="center" airspaceGroup={'Area South'} store={allStore} setStore={setAllStore} />
 
-              <CenterSectorDisplayWithControls airspaceGroup={'Pac North'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls displayType="center" airspaceGroup={'Pac North'} store={allStore} setStore={setAllStore} />
 
-              <CenterSectorDisplayWithControls airspaceGroup={'Pac South'} store={allStore} setStore={setAllStore} />
+              <SectorDisplayWithControls displayType="center" airspaceGroup={'Pac South'} store={allStore} setStore={setAllStore} />
             </Show>
           </Section>
         </div>
