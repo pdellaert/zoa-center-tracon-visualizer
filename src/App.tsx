@@ -30,7 +30,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { BaseMaps } from '~/components/BaseMaps.tsx';
 import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
-import { CenterGeojsonPolyLayers, TraconGeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
+import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
 import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
 import { SettingsDialog } from '~/components/SettingsDialog.tsx';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
@@ -508,8 +508,8 @@ const App: Component = () => {
         >
           <BaseMaps persistedMapsState={persistedBaseMaps} mountedMapsState={mountedBaseMaps} />
           <GeojsonPolySources sources={allSources} />
-          <TraconGeojsonPolyLayers displayStateStore={allStore} allPolys={TRACON_POLY_DEFINITIONS} />
-          <CenterGeojsonPolyLayers displayStateStore={allStore} />
+          <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} />
+          <GeojsonPolyLayers displayStateStore={allStore} type="center" />
           <ArrivalPoints arrivals={displayedArrivals()} />
         </MapGL>
       </div>

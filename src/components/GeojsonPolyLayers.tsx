@@ -37,19 +37,19 @@ type GeojsonLayer = CenterGeojsonLayer | TraconGeojsonLayer;
 
 /**
  * Generic polygon layer component that can display both Center and Tracon layers
+ * Uses a discriminated union type pattern to handle both layer types
  */
-export function GeojsonPolyLayers(props: {
-  displayStateStore: AppDisplayState;
-  type: 'center' | 'tracon';
-  traconPolys?: TraconPolyDefinition[];
-}) {
+export const GeojsonPolyLayers: Component<
+  | { displayStateStore: AppDisplayState; type: 'center' }
+  | { displayStateStore: AppDisplayState; type: 'tracon'; allPolys: TraconPolyDefinition[] }
+> = (props) => {
   // Create the appropriate initial layers based on type
   const createInitialLayers = (): GeojsonLayer[] => {
     if (props.type === 'center') {
       return createCenterLayers();
     } else {
-      if (!props.traconPolys) {
-        console.error('traconPolys is required for tracon layers');
+      if (props.type === 'tracon' && !props.allPolys) {
+        console.error('allPolys is required for tracon layers');
         return [];
       }
       return createTraconLayers();
@@ -72,9 +72,9 @@ export function GeojsonPolyLayers(props: {
 
   // Create Tracon layers
   const createTraconLayers = (): TraconGeojsonLayer[] => {
-    if (!props.traconPolys) return [];
+    if (props.type !== 'tracon' || !props.allPolys) return [];
     
-    return props.traconPolys.flatMap((polyDef) =>
+    return props.allPolys.flatMap((polyDef) =>
       polyDef.polys.sectorConfigs.flatMap((sector) =>
         sector.configPolyUrls.flatMap((polyUrl) =>
           polyUrl.configs.map((config) => ({
@@ -233,28 +233,5 @@ export function GeojsonPolyLayers(props: {
   );
 }
 
-// Convenience wrapper components that maintain the original API
-export const CenterGeojsonPolyLayers: Component<{
-  displayStateStore: AppDisplayState;
-}> = (props) => {
-  return (
-    <GeojsonPolyLayers
-      displayStateStore={props.displayStateStore}
-      type="center"
-    />
-  );
-};
-
-export const TraconGeojsonPolyLayers: Component<{
-  displayStateStore: AppDisplayState;
-  allPolys: TraconPolyDefinition[];
-}> = (props) => {
-  return (
-    <GeojsonPolyLayers
-      displayStateStore={props.displayStateStore}
-      type="tracon"
-      traconPolys={props.allPolys}
-    />
-  );
-};
+// The wrapper components have been removed in favor of using the discriminated union pattern directly
 
