@@ -1,5 +1,5 @@
 import { makePersisted } from '@solid-primitives/storage';
-import { Accessor, batch, Component, createEffect, createMemo, createSignal, DEV, For, Show, untrack } from 'solid-js';
+import { Accessor, Component, createEffect, createMemo, createSignal, DEV, For, Show, untrack } from 'solid-js';
 import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/defaults.ts';
 import { Section, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui-core';
 import { MapStyleSelector } from '~/components/MapStyleSelector.tsx';
@@ -222,23 +222,23 @@ const App: Component = () => {
   });
 
   createEffect((isInitialLoad) => {
-    if (bayConfig() === 'SFOW') {
-      batch(() => {
-        setSfoConfig('SFOW');
-        // Need to track if initial state load from persistence. If so, don't trigger default reset
-        if (!isInitialLoad) {
-          setOakConfig('OAKW');
-          setSjcConfig('SJCW');
-        }
-      });
-    } else if (bayConfig() === 'SFOE') {
-      batch(() => {
-        if (untrack(sfoConfig) === 'SFOW' || untrack(sfoConfig) == null) {
-          setSfoConfig('SFO19');
-        }
-        setOakConfig('OAKE');
-        setSjcConfig('SJCE');
-      });
+    const currentBayConfig = bayConfig();
+
+    if (currentBayConfig === 'SFOW') {
+      setSfoConfig('SFOW');
+
+      if (!isInitialLoad) {
+        setOakConfig('OAKW');
+        setSjcConfig('SJCW');
+      }
+    } else if (currentBayConfig === 'SFOE') {
+      const currentSfoConfig = untrack(sfoConfig);
+      if (currentSfoConfig === 'SFOW' || currentSfoConfig == null) {
+        setSfoConfig('SFO19');
+      }
+
+      setOakConfig('OAKE');
+      setSjcConfig('SJCE');
     }
     return false;
   }, true);
