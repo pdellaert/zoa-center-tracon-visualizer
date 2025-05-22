@@ -29,9 +29,8 @@ import MapGL from 'solid-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { BaseMaps } from '~/components/BaseMaps.tsx';
-import { CenterGeojsonPolyLayers } from '~/components/CenterGeojsonPolyLayers.tsx';
 import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
-import { TraconGeojsonPolyLayers } from '~/components/TraconGeojsonPolyLayers.tsx';
+import { CenterGeojsonPolyLayers, TraconGeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
 import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
 import { SettingsDialog } from '~/components/SettingsDialog.tsx';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
