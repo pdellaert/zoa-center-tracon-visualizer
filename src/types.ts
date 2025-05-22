@@ -50,7 +50,6 @@ export type RgbaDecimal = {
 export type FillPaint = FillLayerSpecification['paint'];
 
 export interface AppDisplayState {
-  updateCount: number;
   centerDisplayStates: CenterAirspaceDisplayState[];
   areaDisplayStates: TraconAirspaceDisplayState[];
 }
@@ -133,7 +132,6 @@ export interface TraconAirspaceDisplayState {
 }
 
 export interface TraconAppDisplayState {
-  updateCount: number;
   areaDisplayStates: TraconAirspaceDisplayState[];
 }
 

@@ -105,7 +105,6 @@ const App: Component = () => {
 
   const [allStore, setAllStore] = makePersisted(
     createStore<AppDisplayState>({
-      updateCount: 0,
       centerDisplayStates: CENTER_POLY_DEFINITIONS.map(createCenterDefaultState),
       areaDisplayStates: TRACON_POLY_DEFINITIONS.map((p) => createTraconDefaultState(p.polys)),
     }),
@@ -247,7 +246,6 @@ const App: Component = () => {
   // Console debugging effects only created in DEV
   if (import.meta.env.DEV) {
     createEffect(() => {
-      console.log('Update count', allStore.updateCount);
       console.log('Sectors display state', allStore.areaDisplayStates);
     });
     createEffect(() => {

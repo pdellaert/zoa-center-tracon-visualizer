@@ -1,11 +1,13 @@
 import {
   AppDisplayState,
   CenterDisplayState,
+  CenterAirspaceDisplayState,
   TraconAirspaceConfig,
   TraconPolyDefinition,
   TraconSectorDisplayState,
+  TraconAirspaceDisplayState,
 } from '~/types';
-import { Component, createEffect, For, Show } from 'solid-js';
+import { Component, createEffect, For, Show, createMemo } from 'solid-js';
 import { Layer } from 'solid-map-gl';
 import { createStore, produce } from 'solid-js/store';
 import { logIfDev } from '~/lib/dev';
@@ -73,7 +75,7 @@ export const GeojsonPolyLayers: Component<
   // Create Tracon layers
   const createTraconLayers = (): TraconGeojsonLayer[] => {
     if (props.type !== 'tracon' || !props.allPolys) return [];
-    
+
     return props.allPolys.flatMap((polyDef) =>
       polyDef.polys.sectorConfigs.flatMap((sector) =>
         sector.configPolyUrls.flatMap((polyUrl) =>
@@ -97,28 +99,33 @@ export const GeojsonPolyLayers: Component<
   const [layers, setLayers] = createStore<GeojsonLayer[]>(createInitialLayers());
   logIfDev('Initial layers', layers);
 
-  // Update layers when display state changes
+  const centerDisplayStates = createMemo(() => props.displayStateStore.centerDisplayStates);
+  const areaDisplayStates = createMemo(() => props.displayStateStore.areaDisplayStates);
+
   createEffect(() => {
     if (props.type === 'center') {
-      updateCenterLayers();
+      const states = centerDisplayStates();
+      updateCenterLayers(states);
     } else {
-      updateTraconLayers();
+      const states = areaDisplayStates();
+      updateTraconLayers(states);
     }
   });
 
   // Update Center layers
-  const updateCenterLayers = () => {
-    const displayFlat = props.displayStateStore.centerDisplayStates.flatMap((area) => area.sectors);
+  const updateCenterLayers = (states: CenterAirspaceDisplayState[]) => {
+    // Create a memoized flat mapping of sectors for efficiency
+    const displayFlat = states.flatMap((area) => area.sectors);
     const displayMap = new Map<string, CenterDisplayState>();
     displayFlat.forEach((s) => displayMap.set(s.name, s));
-    
+
     logIfDev('Updating center layers', displayMap);
 
     setLayers(
       (layer) => layer.type === 'center' && displayMap.has(layer.name),
       produce((layer) => {
         if (layer.type !== 'center') return;
-        
+
         const displayLayer = displayMap.get(layer.name)!;
         layer.color = displayLayer.color;
         layer.isDisplayedTransparent = !displayLayer.isDisplayed;
@@ -128,24 +135,24 @@ export const GeojsonPolyLayers: Component<
   };
 
   // Update Tracon layers
-  const updateTraconLayers = () => {
-    const displayFlat = props.displayStateStore.areaDisplayStates.flatMap((area) =>
-      area.sectors.map((sector) => ({ 
-        ...sector, 
-        config: area.selectedConfig 
+  const updateTraconLayers = (states: TraconAirspaceDisplayState[]) => {
+    const displayFlat = states.flatMap((area) =>
+      area.sectors.map((sector: TraconSectorDisplayState) => ({
+        ...sector,
+        config: area.selectedConfig,
       })),
     );
 
     const displayMap = new Map<string, TraconSectorDisplayState & { config: TraconAirspaceConfig }>();
     displayFlat.forEach((s) => displayMap.set(s.name, s));
-    
+
     logIfDev('Updating tracon layers', displayMap);
 
     setLayers(
       (layer) => layer.type === 'tracon' && displayMap.has(layer.name),
       produce((layer) => {
         if (layer.type !== 'tracon') return;
-        
+
         const displayLayer = displayMap.get(layer.name)!;
         layer.hasBeenModified = layer.hasBeenModified || displayLayer.config === layer.config;
         layer.color = displayLayer.color;
@@ -187,7 +194,7 @@ export const GeojsonPolyLayers: Component<
     <For each={layers}>
       {(layer) => {
         const layerId = getLayerId(layer);
-        
+
         return (
           <Show when={shouldRender(layer)}>
             <Layer
@@ -231,7 +238,4 @@ export const GeojsonPolyLayers: Component<
       }}
     </For>
   );
-}
-
-// The wrapper components have been removed in favor of using the discriminated union pattern directly
-
+};
