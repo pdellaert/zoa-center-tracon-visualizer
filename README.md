@@ -6,6 +6,11 @@ A web-based visualization tool for Oakland Center (ZOA) and TRACON airspace, bui
 
 This application provides an interactive visualization of the Oakland Center (ZOA) and TRACON airspace, allowing users to explore and understand the airspace structure.
 
+This application combines the Oakland Center (ZOA) and TRACON airspace visualizers into a single application. Base repositories:
+
+- [ZOA Visualizer](https://github.com/vzoa/ZoaVisualizer)
+- [ZOA NCT Visualizer](https://github.com/vzoa/NctVisualizer)
+
 ## Features
 
 - Interactive map visualization using Mapbox GL
