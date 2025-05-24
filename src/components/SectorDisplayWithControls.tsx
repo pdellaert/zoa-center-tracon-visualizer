@@ -6,7 +6,6 @@ import { SelectContent, SelectItem, SelectTrigger, SelectValue, Checkbox } from 
 import { cn } from '~/lib/utils';
 import { useSectorState } from '~/lib/useSectorState';
 
-// Combined interface that handles both Center and Tracon display props
 interface SectorDisplayWithControlsProps {
   airspaceGroup: string | TraconAirspaceConfigDependentGroup;
   store: AppDisplayState;
@@ -14,10 +13,9 @@ interface SectorDisplayWithControlsProps {
   displayType: 'center' | 'tracon';
   airspaceConfigOptions?: TraconAirspaceConfig[];
   dependentOnConfig?: TraconAirspaceConfig;
-  hideHeader?: boolean; // Set to true to hide the area header (useful when it's the only area for an airport)
+  hideHeader?: boolean;
 }
 
-// Unified implementation for both Center and Tracon sector displays
 export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
   const isCenter = props.displayType === 'center';
   const sectorState = useSectorState(props.store, props.setStore);
@@ -29,7 +27,6 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
     });
   }
 
-  // Common memoized values for both types
   const thisAirspaceGroup = createMemo(() => {
     return isCenter
       ? props.store.centerDisplayStates.find((a) => a.name === props.airspaceGroup)
@@ -39,7 +36,6 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
   const sectors = createMemo(() => thisAirspaceGroup()?.sectors);
   const checkedSectors = createMemo(() => sectors()?.filter((s) => s.isDisplayed));
 
-  // Computed values for both display types
   const showCheckAll = createMemo(() => {
     const checked = checkedSectors();
     const total = sectors();
@@ -57,38 +53,20 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
     return checked.length > 0;
   });
 
-  // Common handler for checkbox changes
   const handleCheckboxChange = (sectorName: string, value: boolean) => {
-    sectorState.toggleSectorDisplay(
-      props.displayType,
-      props.airspaceGroup as string,
-      sectorName,
-      value
-    );
+    sectorState.toggleSectorDisplay(props.displayType, props.airspaceGroup as string, sectorName, value);
   };
 
-  // Common handler for color changes
   const handleColorChange = (sectorName: string, color: string) => {
-    sectorState.updateSectorColor(
-      props.displayType,
-      props.airspaceGroup as string,
-      sectorName,
-      color
-    );
+    sectorState.updateSectorColor(props.displayType, props.airspaceGroup as string, sectorName, color);
   };
 
-  // Handler for Check/Uncheck all (for both display types)
   const handleToggleAll = (value: boolean) => {
-    sectorState.toggleAllSectors(
-      props.displayType,
-      props.airspaceGroup as string,
-      value
-    );
+    sectorState.toggleAllSectors(props.displayType, props.airspaceGroup as string, value);
   };
 
   return (
     <div>
-      {/* Configuration selector (Tracon only) */}
       {!isCenter && (
         <Show when={typeof props.dependentOnConfig === 'undefined'}>
           <Select
@@ -115,7 +93,6 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
         </Show>
       )}
 
-      {/* Common sector controls */}
       <div
         class={cn([
           'flex flex-col space-y-1',
@@ -123,10 +100,8 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
           { 'mt-2': !isCenter && typeof props.dependentOnConfig === 'undefined' },
         ])}
       >
-        {/* Title for both Center and Tracon displays (unless hidden) */}
         {(!props.hideHeader || isCenter) && <div class="text-white">{props.airspaceGroup}</div>}
 
-        {/* Check/Uncheck all buttons */}
         {
           <div class="flex flex-row space-x-2 cursor-pointer">
             <Show when={showCheckAll()}>
@@ -142,7 +117,6 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
           </div>
         }
 
-        {/* Sector list with checkboxes */}
         <For each={sectors()}>
           {(sector) => (
             <div class="flex justify-between">

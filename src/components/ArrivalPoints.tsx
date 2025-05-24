@@ -1,6 +1,6 @@
-import { Component, For } from "solid-js";
-import { Layer, Source } from "solid-map-gl";
-import { ArrivalProcedure, Sequence } from "~/types";
+import { Component, For } from 'solid-js';
+import { Layer, Source } from 'solid-map-gl';
+import { ArrivalProcedure, Sequence } from '~/types';
 
 interface ArrivalPointsProps {
   arrivals: ArrivalProcedure[];
@@ -13,15 +13,15 @@ interface ArrivalPointsProps {
 // };
 
 const transitionString = (arrival: ArrivalProcedure, sequence: Sequence) => {
-  let transitionId = sequence.transition ? sequence.transition : "null";
+  let transitionId = sequence.transition ? sequence.transition : 'null';
   return `${arrival.arrivalIdentifier}-${transitionId}`;
 };
 
-const makeFixFeatures = (arrival: ArrivalProcedure, sequence: Sequence) => {
+const makeFixFeatures = (sequence: Sequence) => {
   return sequence.points.map((p) => ({
-    type: "Feature",
+    type: 'Feature',
     geometry: {
-      type: "Point",
+      type: 'Point',
       coordinates: [p.longitude, p.latitude],
     },
     properties: {
@@ -43,7 +43,7 @@ const makeAltitudesString = (minAlt?: string, maxAlt?: string) => {
     } else if (maxAlt) {
       return `\nAoB ${maxAlt}`;
     } else {
-      return "";
+      return '';
     }
   }
 };
@@ -58,11 +58,11 @@ export const ArrivalPoints: Component<ArrivalPointsProps> = (props) => {
               <Source
                 id={transitionString(arrival, sequence)}
                 source={{
-                  type: "geojson",
+                  type: 'geojson',
                   data: {
-                    type: "Feature",
+                    type: 'Feature',
                     geometry: {
-                      type: "LineString",
+                      type: 'LineString',
                       coordinates: sequence.points.map((p) => [p.longitude, p.latitude]),
                     },
                     properties: {
@@ -75,10 +75,10 @@ export const ArrivalPoints: Component<ArrivalPointsProps> = (props) => {
                 <Layer
                   id={`arrival-line-${transitionString(arrival, sequence)}`}
                   style={{
-                    type: "line",
+                    type: 'line',
                     paint: {
-                      "line-color": "#ababab",
-                      "line-width": 4,
+                      'line-color': '#ababab',
+                      'line-width': 4,
                     },
                   }}
                 />
@@ -98,25 +98,25 @@ export const ArrivalPoints: Component<ArrivalPointsProps> = (props) => {
               <Source
                 id={`${transitionString(arrival, sequence)}-text`}
                 source={{
-                  type: "geojson",
-                  data: { type: "FeatureCollection", features: makeFixFeatures(arrival, sequence) },
+                  type: 'geojson',
+                  data: { type: 'FeatureCollection', features: makeFixFeatures(sequence) },
                 }}
               >
                 <Layer
                   id={`${transitionString(arrival, sequence)}-text-layer`}
                   style={{
-                    type: "symbol",
+                    type: 'symbol',
                     layout: {
-                      "text-field": ["get", "text"],
+                      'text-field': ['get', 'text'],
                       // "text-font": textFontFamily,
-                      "text-rotation-alignment": "auto",
-                      "text-allow-overlap": true,
-                      "text-anchor": "top",
-                      "text-size": 12,
-                      "text-offset": [0, 0.5],
+                      'text-rotation-alignment': 'auto',
+                      'text-allow-overlap': true,
+                      'text-anchor': 'top',
+                      'text-size': 12,
+                      'text-offset': [0, 0.5],
                     },
                     paint: {
-                      "text-color": "#000000",
+                      'text-color': '#000000',
                       // "text-halo-blur": textHaloBlur,
                       // "text-halo-color": textHaloColor,
                       // "text-halo-width": textHaloWidth,
@@ -127,12 +127,12 @@ export const ArrivalPoints: Component<ArrivalPointsProps> = (props) => {
                 <Layer
                   id={`arrival-points-${transitionString(arrival, sequence)}`}
                   style={{
-                    type: "circle",
+                    type: 'circle',
                     paint: {
-                      "circle-radius": 4,
-                      "circle-color": "#000000",
-                      "circle-stroke-width": 1,
-                      "circle-stroke-color": "#fff",
+                      'circle-radius': 4,
+                      'circle-color': '#000000',
+                      'circle-stroke-width': 1,
+                      'circle-stroke-color': '#fff',
                     },
                   }}
                 />
