@@ -4,6 +4,7 @@ import { SetStoreFunction } from 'solid-js/store';
 import { Select } from '@kobalte/core/select';
 import { SelectContent, SelectItem, SelectTrigger, SelectValue, Checkbox } from './ui-core';
 import { cn } from '~/lib/utils';
+import { useSectorState } from '~/lib/useSectorState';
 
 // Combined interface that handles both Center and Tracon display props
 interface SectorDisplayWithControlsProps {
@@ -19,16 +20,12 @@ interface SectorDisplayWithControlsProps {
 // Unified implementation for both Center and Tracon sector displays
 export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
   const isCenter = props.displayType === 'center';
+  const sectorState = useSectorState(props.store, props.setStore);
 
   // Apply dependent configuration for Tracon if specified
   if (!isCenter && props.dependentOnConfig) {
     createEffect(() => {
-      props.setStore(
-        'areaDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'selectedConfig',
-        props.dependentOnConfig!,
-      );
+      sectorState.updateTraconConfig(props.airspaceGroup as string, props.dependentOnConfig!);
     });
   }
 
@@ -62,71 +59,31 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
 
   // Common handler for checkbox changes
   const handleCheckboxChange = (sectorName: string, value: boolean) => {
-    if (isCenter) {
-      props.setStore(
-        'centerDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'sectors',
-        (s) => s.name === sectorName,
-        'isDisplayed',
-        value,
-      );
-    } else {
-      props.setStore(
-        'areaDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'sectors',
-        (s) => s.name === sectorName,
-        'isDisplayed',
-        value,
-      );
-    }
+    sectorState.toggleSectorDisplay(
+      props.displayType,
+      props.airspaceGroup as string,
+      sectorName,
+      value
+    );
   };
 
   // Common handler for color changes
   const handleColorChange = (sectorName: string, color: string) => {
-    if (isCenter) {
-      props.setStore(
-        'centerDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'sectors',
-        (s) => s.name === sectorName,
-        'color',
-        color,
-      );
-    } else {
-      props.setStore(
-        'areaDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'sectors',
-        (s) => s.name === sectorName,
-        'color',
-        color,
-      );
-    }
+    sectorState.updateSectorColor(
+      props.displayType,
+      props.airspaceGroup as string,
+      sectorName,
+      color
+    );
   };
 
   // Handler for Check/Uncheck all (for both display types)
   const handleToggleAll = (value: boolean) => {
-    if (isCenter) {
-      props.setStore(
-        'centerDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'sectors',
-        (_s) => true,
-        'isDisplayed',
-        value,
-      );
-    } else {
-      props.setStore(
-        'areaDisplayStates',
-        (a) => a.name === props.airspaceGroup,
-        'sectors',
-        (_s) => true,
-        'isDisplayed',
-        value,
-      );
-    }
+    sectorState.toggleAllSectors(
+      props.displayType,
+      props.airspaceGroup as string,
+      value
+    );
   };
 
   return (
@@ -144,7 +101,7 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
             }
             onChange={(val) => {
               if (val) {
-                props.setStore('areaDisplayStates', (a) => a.name === props.airspaceGroup, 'selectedConfig', val);
+                sectorState.updateTraconConfig(props.airspaceGroup as string, val);
               }
             }}
             disallowEmptySelection={true}
