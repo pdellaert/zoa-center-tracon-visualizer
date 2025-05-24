@@ -1,7 +1,7 @@
 {
-  "name": "zoa-tracon-visualizer",
-  "version": "0.0.0",
-  "description": "ZOA and Tracon Airspace Visualizer",
+  "name": "zoa-center-tracon-visualizer",
+  "version": "0.1.0",
+  "description": "ZOA Center and Tracon Airspace Visualizer",
   "type": "module",
   "scripts": {
     "start": "vite",
@@ -10,7 +10,7 @@
     "serve": "vite preview"
   },
   "license": "MIT",
-  "author": "Philippe Dellaert",
+  "author": "Ken Greim, Philippe Dellaert",
   "devDependencies": {
     "@types/node": "^22.15.21",
     "prettier": "^3.5.3",
