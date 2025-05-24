@@ -35,7 +35,7 @@ pnpm run dev
 pnpm start
 ```
 
-This will launch the application in development mode at [http://localhost:5173](http://localhost:5173).
+This will launch the application in development mode.
 
 ### Building for Production
 
