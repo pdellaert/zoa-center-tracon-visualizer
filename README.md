@@ -1,34 +1,63 @@
-## Usage
+# ZOA Center and Tracon Airspace Visualizer
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+A web-based visualization tool for Oakland Center (ZOA) and TRACON airspace, built with SolidJS, Mapbox GL, and TailwindCSS.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+## Overview
+
+This application provides an interactive visualization of the Oakland Center (ZOA) and TRACON airspace, allowing users to explore and understand the airspace structure.
+
+## Features
+
+- Interactive map visualization using Mapbox GL
+- Airspace sector display
+- SolidJS-powered interface with TailwindCSS styling
+
+## Installation
 
 ```bash
-$ npm install # or pnpm install or yarn install
+pnpm install
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## Usage
 
-## Available Scripts
+### Development
 
-In the project directory, you can run:
+Start the development server:
 
-### `npm run dev` or `npm start`
+```bash
+pnpm run dev
+# or
+pnpm start
+```
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+This will launch the application in development mode at [http://localhost:5173](http://localhost:5173).
 
-The page will reload if you make edits.<br>
+### Building for Production
 
-### `npm run build`
+```bash
+pnpm run build
+```
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+This creates a production-ready build in the `dist` directory.
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+### Previewing the Production Build
 
-## Deployment
+```bash
+pnpm run serve
+```
 
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+## Technologies
+
+- [SolidJS](https://solidjs.com) - UI framework
+- [Vite](https://vitejs.dev) - Build tool
+- [Mapbox GL](https://docs.mapbox.com/mapbox-gl-js/api/) - Map visualization
+- [TailwindCSS](https://tailwindcss.com) - Styling
+
+## License
+
+MIT
+
+## Authors
+
+- Ken Greim
+- Philippe Dellaert
