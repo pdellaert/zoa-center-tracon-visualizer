@@ -1,8 +1,8 @@
-import { Component, createMemo, For, Show } from "solid-js";
-import { FillPaint, PopupState, Settings } from "../types";
-import { comparePolyAlts, getFillColor, isTransparentFill } from "~/lib/geojson.ts";
-import { createMousePosition } from "@solid-primitives/mouse";
-import { cn } from "../lib/utils";
+import { Component, createMemo, For, Show } from 'solid-js';
+import { FillPaint, PopupState, Settings } from '~/lib/types';
+import { comparePolyAlts, getFillColor, isTransparentFill } from '~/lib/geojson';
+import { createMousePosition } from '@solid-primitives/mouse';
+import { cn } from '~/lib/utils';
 
 interface InfoPopupProps {
   popupState: PopupState;
@@ -27,9 +27,9 @@ export const InfoPopup: Component<InfoPopupProps> = (props) => {
       <Show when={props.popupState.vis}>
         <div
           class={cn(
-            "bg-gray-200/80 rounded border border-gray-800 p-1.5 z-40 items-center",
+            'bg-gray-200/80 rounded border border-gray-800 p-1.5 z-40 items-center',
             { fixed: props.settings.popup.followMouse },
-            { "absolute top-14 left-5 w-48": !props.settings.popup.followMouse },
+            { 'absolute top-14 left-5 w-48': !props.settings.popup.followMouse },
           )}
           style={styleOffset()}
         >
@@ -39,13 +39,13 @@ export const InfoPopup: Component<InfoPopupProps> = (props) => {
                 <tr>
                   <td
                     class={cn(
-                      { "font-bold": !polyInfo.isTransparent },
+                      { 'font-bold': !polyInfo.isTransparent },
                       { italic: polyInfo.isTransparent },
-                      { "w-20": !props.settings.popup.followMouse },
+                      { 'w-20': !props.settings.popup.followMouse },
                     )}
                     style={{
                       color: polyInfo.isTransparent
-                        ? "#4b5563" // Tailwind default gray-600
+                        ? '#4b5563' // Tailwind default gray-600
                         : getFillColor(polyInfo.poly.layer?.paint as FillPaint),
                     }}
                   >
@@ -53,13 +53,13 @@ export const InfoPopup: Component<InfoPopupProps> = (props) => {
                   </td>
                   <td class="font-mono w-12 text-center ml-3">
                     {polyInfo.poly.properties?.minAlt === 0
-                      ? "SFC"
-                      : polyInfo.poly.properties?.minAlt.toString().padStart(3, "0")}
+                      ? 'SFC'
+                      : polyInfo.poly.properties?.minAlt.toString().padStart(3, '0')}
                   </td>
                   <td class="font-mono w-12 text-center">
                     {polyInfo.poly.properties?.maxAlt === 999
-                      ? "UNL"
-                      : polyInfo.poly.properties?.maxAlt.toString().padStart(3, "0")}
+                      ? 'UNL'
+                      : polyInfo.poly.properties?.maxAlt.toString().padStart(3, '0')}
                   </td>
                 </tr>
               )}

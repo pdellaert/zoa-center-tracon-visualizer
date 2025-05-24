@@ -1,10 +1,10 @@
 import { makePersisted } from '@solid-primitives/storage';
 import { Accessor, Component, createEffect, createMemo, createSignal, DEV, For, Show, untrack } from 'solid-js';
-import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/defaults.ts';
+import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/lib/defaults';
 import { Section, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui-core';
-import { MapStyleSelector } from '~/components/MapStyleSelector.tsx';
+import { MapStyleSelector } from '~/components/MapStyleSelector';
 import { createStore, produce } from 'solid-js/store';
-import { BASE_MAPS, CENTER_POLY_DEFINITIONS, TRACON_POLY_DEFINITIONS } from '~/config.ts';
+import { BASE_MAPS, CENTER_POLY_DEFINITIONS, TRACON_POLY_DEFINITIONS } from '~/lib/config';
 import {
   CenterAirspaceDisplayState,
   AppDisplayState,
@@ -19,26 +19,26 @@ import {
   TraconAirportConfig,
   TraconAreaPolys,
   TraconAirspaceDisplayState,
-} from '~/types.ts';
-import { Checkbox } from '~/components/ui-core/Checkbox.tsx';
-import { Footer } from '~/components/Footer.tsx';
-import { MapReset } from '~/components/MapReset.tsx';
+} from '~/lib/types';
+import { Checkbox } from '~/components/ui-core/Checkbox';
+import { Footer } from '~/components/Footer';
+import { MapReset } from '~/components/MapReset';
 
 // Mapbox
 import MapGL from 'solid-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-import { BaseMaps } from '~/components/BaseMaps.tsx';
-import { GeojsonPolySources } from '~/components/GeojsonPolySources.tsx';
-import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers.tsx';
-import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls.tsx';
-import { SettingsDialog } from '~/components/SettingsDialog.tsx';
+import { BaseMaps } from '~/components/BaseMaps';
+import { GeojsonPolySources } from '~/components/GeojsonPolySources';
+import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers';
+import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls';
+import { SettingsDialog } from '~/components/SettingsDialog';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
-import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson.ts';
-import { logIfDev } from '~/lib/dev.ts';
-import { InfoPopup } from '~/components/InfoPopup.tsx';
-import { ProceduresDialog } from '~/components/ProceduresDialog.tsx';
-import { ArrivalPoints } from '~/components/ArrivalPoints.tsx';
+import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson';
+import { logIfDev } from '~/lib/dev';
+import { InfoPopup } from '~/components/InfoPopup';
+import { ProceduresDialog } from '~/components/ProceduresDialog';
+import { ArrivalPoints } from '~/components/ArrivalPoints';
 
 const createCenterDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplayState => ({
   name: area.name,
@@ -91,7 +91,7 @@ const App: Component = () => {
   });
 
   const centerSources = CENTER_POLY_DEFINITIONS.flatMap((a) =>
-    a.sectors.map((s) => ({
+    a.sectors.map((s: { sectorName: string; polyUrl: string }) => ({
       id: s.sectorName,
       url: s.polyUrl,
     })),

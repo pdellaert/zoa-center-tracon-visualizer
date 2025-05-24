@@ -1,7 +1,7 @@
-import { Component } from "solid-js";
-import { Sidebar } from "./ui-core/Sidebar";
-import { AirportArrivals } from "./AirportArrivals";
-import { ArrivalProcedure } from "~/types";
+import { Component } from 'solid-js';
+import { Sidebar } from './ui-core/Sidebar';
+import { AirportArrivals } from './AirportArrivals';
+import { ArrivalProcedure } from '~/lib/types';
 
 interface ProceduresDialogProps {
   isOpen: boolean;

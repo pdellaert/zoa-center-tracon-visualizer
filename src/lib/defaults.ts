@@ -1,9 +1,9 @@
-import { Viewport } from "solid-map-gl";
-import { MapStyle, Settings } from "~/types.ts";
+import { Viewport } from 'solid-map-gl';
+import { MapStyle, Settings } from '~/lib/types';
 
 export const DEFAULT_MAP_STYLE: MapStyle = {
-  value: "mapbox://styles/mapbox/empty-v9",
-  label: "Empty",
+  value: 'mapbox://styles/mapbox/empty-v9',
+  label: 'Empty',
   disabled: false,
 };
 

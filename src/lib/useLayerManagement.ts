@@ -1,6 +1,11 @@
 import { createStore, produce } from 'solid-js/store';
 import { createEffect, createMemo } from 'solid-js';
-import { AppDisplayState, CenterAirspaceDisplayState, TraconAirspaceDisplayState, TraconPolyDefinition } from '~/types';
+import {
+  AppDisplayState,
+  CenterAirspaceDisplayState,
+  TraconAirspaceDisplayState,
+  TraconPolyDefinition,
+} from '~/lib/types';
 import { logIfDev } from '~/lib/dev';
 
 export type GeojsonLayerBase = {

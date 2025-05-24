@@ -1,15 +1,15 @@
-import { Component, createSignal, For, Show } from "solid-js";
-import { Checkbox } from "./ui-core/Checkbox";
-import { AirportSection, ArrivalProcedure, ArrivalProcedureDisplayState } from "~/types";
-import { createStore, produce } from "solid-js/store";
-import { NAVDATA_API_URL } from "~/config.ts";
+import { Component, createSignal, For, Show } from 'solid-js';
+import { Checkbox } from '~/components/ui-core/Checkbox';
+import { AirportSection, ArrivalProcedure, ArrivalProcedureDisplayState } from '~/lib/types';
+import { createStore, produce } from 'solid-js/store';
+import { NAVDATA_API_URL } from '~/lib/config';
 
 interface AirportArrivalsProps {
   onArrivalToggle: (arrival: ArrivalProcedure, isDisplayed: boolean) => void;
 }
 
 export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
-  const [airportInput, setAirportInput] = createSignal("");
+  const [airportInput, setAirportInput] = createSignal('');
   const [error, setError] = createSignal<string | null>(null);
   const [isLoading, setIsLoading] = createSignal(false);
   const [airportSections, setAirportSections] = createStore<AirportSection[]>([]);
@@ -19,7 +19,7 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
     const airport = airportInput().trim().toUpperCase();
 
     if (!airport) {
-      setError("Please enter an airport identifier");
+      setError('Please enter an airport identifier');
       return;
     }
 
@@ -30,7 +30,7 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
 
     // Check if airport already exists
     if (airportSections.some((section) => section.id === airport)) {
-      setError("This airport has already been added");
+      setError('This airport has already been added');
       return;
     }
 
@@ -43,7 +43,7 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
         if (response.status === 404) {
           throw new Error(`No arrival procedures found for ${airport}`);
         }
-        throw new Error("Failed to fetch arrivals");
+        throw new Error('Failed to fetch arrivals');
       }
       const procedures: ArrivalProcedure[] = await response.json();
 
@@ -66,11 +66,11 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
         }),
       );
 
-      setAirportInput("");
+      setAirportInput('');
       setError(null);
     } catch (error) {
-      console.error("Error fetching arrivals:", error);
-      setError(error instanceof Error ? error.message : "Failed to fetch arrivals");
+      console.error('Error fetching arrivals:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch arrivals');
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +118,7 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
             disabled={isLoading()}
             class="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-2 py-2 rounded transition-colors"
           >
-            {isLoading() ? "Loading..." : "Add"}
+            {isLoading() ? 'Loading...' : 'Add'}
           </button>
         </div>
         <Show when={error()}>
@@ -134,22 +134,15 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
                 <button
                   onClick={() => toggleSection(section.id)}
                   class="text-slate-300 hover:text-white focus:outline-none"
-                  title={section.isExpanded ? "Collapse" : "Expand"}
+                  title={section.isExpanded ? 'Collapse' : 'Expand'}
                 >
                   <svg
-                    class={`w-4 h-4 transform transition-transform ${
-                      section.isExpanded ? "rotate-90" : ""
-                    }`}
+                    class={`w-4 h-4 transform transition-transform ${section.isExpanded ? 'rotate-90' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
-                    />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
                 <h3 class="text-white font-mono flex-grow">{section.id}</h3>
@@ -178,9 +171,9 @@ export const AirportArrivals: Component<AirportArrivalsProps> = (props) => {
                         onChange={(checked) => {
                           setAirportSections(
                             (a) => a.id === section.id,
-                            "arrivals",
+                            'arrivals',
                             (arr) => arr.id === arrival.id,
-                            "isDisplayed",
+                            'isDisplayed',
                             checked,
                           );
                           props.onArrivalToggle(arrival.procedure, checked);

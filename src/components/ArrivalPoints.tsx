@@ -1,6 +1,6 @@
 import { Component, For } from 'solid-js';
 import { Layer, Source } from 'solid-map-gl';
-import { ArrivalProcedure, Sequence } from '~/types';
+import { ArrivalProcedure, Sequence } from '~/lib/types';
 
 interface ArrivalPointsProps {
   arrivals: ArrivalProcedure[];

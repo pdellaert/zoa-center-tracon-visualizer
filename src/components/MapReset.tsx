@@ -1,6 +1,6 @@
-import { Component, createMemo, Setter, Show } from "solid-js";
-import { Viewport } from "solid-map-gl";
-import { DEFAULT_VIEWPORT } from "~/defaults.ts";
+import { Component, createMemo, Setter, Show } from 'solid-js';
+import { Viewport } from 'solid-map-gl';
+import { DEFAULT_VIEWPORT } from '~/lib/defaults';
 
 interface MapResetProps {
   viewport: Viewport;

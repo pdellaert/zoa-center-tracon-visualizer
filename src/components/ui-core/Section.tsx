@@ -1,4 +1,4 @@
-import { ParentComponent } from "solid-js";
+import { ParentComponent } from 'solid-js';
 
 interface SectionProps {
   header: string;

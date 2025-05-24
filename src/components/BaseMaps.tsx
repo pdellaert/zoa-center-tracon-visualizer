@@ -1,6 +1,6 @@
-import { Layer, Source } from "solid-map-gl";
-import { Component, For, Show } from "solid-js";
-import { MountedBaseMapState, PersistedBaseMapState } from "../types";
+import { Layer, Source } from 'solid-map-gl';
+import { Component, For, Show } from 'solid-js';
+import { MountedBaseMapState, PersistedBaseMapState } from '~/lib/types';
 
 interface BasemapsProps {
   persistedMapsState: PersistedBaseMapState[];
@@ -16,7 +16,7 @@ export const BaseMaps: Component<BasemapsProps> = (props) => {
           <Source
             id={map.baseMap.name}
             source={{
-              type: "vector",
+              type: 'vector',
               url: map.baseMap.url,
             }}
           >
@@ -24,8 +24,8 @@ export const BaseMaps: Component<BasemapsProps> = (props) => {
               <Layer
                 id={map.baseMap.name}
                 style={{
-                  "source-layer": map.baseMap.sourceLayer,
-                  type: "line",
+                  'source-layer': map.baseMap.sourceLayer,
+                  type: 'line',
                 }}
                 visible={map.checked}
               />

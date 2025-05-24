@@ -1,101 +1,101 @@
-import { CenterAreaDefinition, BaseMap, MapStyle, TraconAreaPolys, TraconPolyDefinition } from '~/types.ts';
-import { DEFAULT_MAP_STYLE } from '~/defaults.ts';
+import { CenterAreaDefinition, BaseMap, MapStyle, TraconAreaPolys, TraconPolyDefinition } from '~/lib/types';
+import { DEFAULT_MAP_STYLE } from '~/lib/defaults';
 
 ///////////////////////////////////////////////////
 // Center Areas
 ///////////////////////////////////////////////////
 // Area East
-import sector30 from './polys/center/east/30.geojson';
-import sector33 from './polys/center/east/33.geojson';
-import sector34 from './polys/center/east/34.geojson';
-import sector44 from './polys/center/east/44.geojson';
-import sector45 from './polys/center/east/45.geojson';
-import sector46 from './polys/center/east/46.geojson';
+import sector30 from '~/polys/center/east/30.geojson';
+import sector33 from '~/polys/center/east/33.geojson';
+import sector34 from '~/polys/center/east/34.geojson';
+import sector44 from '~/polys/center/east/44.geojson';
+import sector45 from '~/polys/center/east/45.geojson';
+import sector46 from '~/polys/center/east/46.geojson';
 
 // Area North
-import sector29 from './polys/center/north/29.geojson';
-import sector32 from './polys/center/north/32.geojson';
-import sector40 from './polys/center/north/40.geojson';
-import sector41 from './polys/center/north/41.geojson';
-import sector42 from './polys/center/north/42.geojson';
-import sector43 from './polys/center/north/43.geojson';
+import sector29 from '~/polys/center/north/29.geojson';
+import sector32 from '~/polys/center/north/32.geojson';
+import sector40 from '~/polys/center/north/40.geojson';
+import sector41 from '~/polys/center/north/41.geojson';
+import sector42 from '~/polys/center/north/42.geojson';
+import sector43 from '~/polys/center/north/43.geojson';
 
 // Pac North
-import sector31 from './polys/center/pacnorth/31.geojson';
-import sector36 from './polys/center/pacnorth/36.geojson';
+import sector31 from '~/polys/center/pacnorth/31.geojson';
+import sector36 from '~/polys/center/pacnorth/36.geojson';
 
 // Pac South
-import sector14 from './polys/center/pacsouth/14.geojson';
-import sector35 from './polys/center/pacsouth/35.geojson';
+import sector14 from '~/polys/center/pacsouth/14.geojson';
+import sector35 from '~/polys/center/pacsouth/35.geojson';
 
 // Area South
-import sector10 from './polys/center/south/10.geojson';
-import sector11 from './polys/center/south/11.geojson';
-import sector13 from './polys/center/south/13.geojson';
-import sector15 from './polys/center/south/15.geojson';
-import sector16 from './polys/center/south/16.geojson';
-import sector22 from './polys/center/south/22.geojson';
+import sector10 from '~/polys/center/south/10.geojson';
+import sector11 from '~/polys/center/south/11.geojson';
+import sector13 from '~/polys/center/south/13.geojson';
+import sector15 from '~/polys/center/south/15.geojson';
+import sector16 from '~/polys/center/south/16.geojson';
+import sector22 from '~/polys/center/south/22.geojson';
 
 ///////////////////////////////////////////////////
 // Tracon Areas
 ///////////////////////////////////////////////////
 // E-NV
-import nugget from './polys/tracon/e-nv/nugget.geojson';
-import silver from './polys/tracon/e-nv/silver.geojson';
+import nugget from '~/polys/tracon/e-nv/nugget.geojson';
+import silver from '~/polys/tracon/e-nv/silver.geojson';
 
 // E-CA
-import smfnElkhorn from './polys/tracon/e-ca/smfn-elkhorn.geojson';
-import smfnParadise from './polys/tracon/e-ca/smfn-paradise.geojson';
-import smfsElkhorn from './polys/tracon/e-ca/smfs-elkhorn.geojson';
-import smfsParadise from './polys/tracon/e-ca/smfs-paradise.geojson';
+import smfnElkhorn from '~/polys/tracon/e-ca/smfn-elkhorn.geojson';
+import smfnParadise from '~/polys/tracon/e-ca/smfn-paradise.geojson';
+import smfsElkhorn from '~/polys/tracon/e-ca/smfs-elkhorn.geojson';
+import smfsParadise from '~/polys/tracon/e-ca/smfs-paradise.geojson';
 
 // A
-import morgan from './polys/tracon/a/morgan.geojson';
-import seca from './polys/tracon/a/seca.geojson';
-import sfowLicke from './polys/tracon/a/sfow-licke.geojson';
-import sfowToga from './polys/tracon/a/sfow-toga.geojson';
-import sfoeLicke from './polys/tracon/a/sfoe-licke.geojson';
-import sfoeToga from './polys/tracon/a/sfoe-toga.geojson';
-import sjceLicke from './polys/tracon/a/sjce-licke.geojson';
-import sjceToga from './polys/tracon/a/sjce-toga.geojson';
+import morgan from '~/polys/tracon/a/morgan.geojson';
+import seca from '~/polys/tracon/a/seca.geojson';
+import sfowLicke from '~/polys/tracon/a/sfow-licke.geojson';
+import sfowToga from '~/polys/tracon/a/sfow-toga.geojson';
+import sfoeLicke from '~/polys/tracon/a/sfoe-licke.geojson';
+import sfoeToga from '~/polys/tracon/a/sfoe-toga.geojson';
+import sjceLicke from '~/polys/tracon/a/sjce-licke.geojson';
+import sjceToga from '~/polys/tracon/a/sjce-toga.geojson';
 
 // B
-import sfowBoulder from './polys/tracon/b/sfow-boulder.geojson';
-import sfowCedar from './polys/tracon/b/sfow-cedar.geojson';
-import sfowFoster from './polys/tracon/b/sfow-foster.geojson';
-import sfowLaguna from './polys/tracon/b/sfow-laguna.geojson';
-import sfowNiles from './polys/tracon/b/sfow-niles.geojson';
-import sfowWoodside from './polys/tracon/b/sfow-woodside.geojson';
-import sfoeBoulder from './polys/tracon/b/sfoe-boulder.geojson';
-import sfoeCedar from './polys/tracon/b/sfoe-cedar.geojson';
-import sfoeFoster from './polys/tracon/b/sfoe-foster.geojson';
-import sfoeLaguna from './polys/tracon/b/sfoe-laguna.geojson';
-import sfoeNiles from './polys/tracon/b/sfoe-niles.geojson';
-import sfoeWoodside from './polys/tracon/b/sfoe-woodside.geojson';
-import sfo10Woodside from './polys/tracon/b/sfo10-woodside.geojson';
-import sfo10Niles from './polys/tracon/b/sfo10-niles.geojson';
-import sfo10Foster from './polys/tracon/b/sfo10-foster.geojson';
-import sfo10Boulder from './polys/tracon/b/sfo10-boulder.geojson';
-import oakeFoster from './polys/tracon/b/oake-foster.geojson';
-import oakeBoulder from './polys/tracon/b/oake-boulder.geojson';
+import sfowBoulder from '~/polys/tracon/b/sfow-boulder.geojson';
+import sfowCedar from '~/polys/tracon/b/sfow-cedar.geojson';
+import sfowFoster from '~/polys/tracon/b/sfow-foster.geojson';
+import sfowLaguna from '~/polys/tracon/b/sfow-laguna.geojson';
+import sfowNiles from '~/polys/tracon/b/sfow-niles.geojson';
+import sfowWoodside from '~/polys/tracon/b/sfow-woodside.geojson';
+import sfoeBoulder from '~/polys/tracon/b/sfoe-boulder.geojson';
+import sfoeCedar from '~/polys/tracon/b/sfoe-cedar.geojson';
+import sfoeFoster from '~/polys/tracon/b/sfoe-foster.geojson';
+import sfoeLaguna from '~/polys/tracon/b/sfoe-laguna.geojson';
+import sfoeNiles from '~/polys/tracon/b/sfoe-niles.geojson';
+import sfoeWoodside from '~/polys/tracon/b/sfoe-woodside.geojson';
+import sfo10Woodside from '~/polys/tracon/b/sfo10-woodside.geojson';
+import sfo10Niles from '~/polys/tracon/b/sfo10-niles.geojson';
+import sfo10Foster from '~/polys/tracon/b/sfo10-foster.geojson';
+import sfo10Boulder from '~/polys/tracon/b/sfo10-boulder.geojson';
+import oakeFoster from '~/polys/tracon/b/oake-foster.geojson';
+import oakeBoulder from '~/polys/tracon/b/oake-boulder.geojson';
 
 // C
-import sfowValley from './polys/tracon/c/sfow-valley.geojson';
-import sfowGrove from './polys/tracon/c/sfow-grove.geojson';
-import sfowSunol from './polys/tracon/c/sfow-sunol.geojson';
-import sfoeValley from './polys/tracon/c/sfoe-valley.geojson';
-import sfoeGrove from './polys/tracon/c/sfoe-grove.geojson';
-import sfoeSunol from './polys/tracon/c/sfoe-sunol.geojson';
-import sfo10Grove from './polys/tracon/c/sfo10-grove.geojson';
-import oakeGrove from './polys/tracon/c/oake-grove.geojson';
+import sfowValley from '~/polys/tracon/c/sfow-valley.geojson';
+import sfowGrove from '~/polys/tracon/c/sfow-grove.geojson';
+import sfowSunol from '~/polys/tracon/c/sfow-sunol.geojson';
+import sfoeValley from '~/polys/tracon/c/sfoe-valley.geojson';
+import sfoeGrove from '~/polys/tracon/c/sfoe-grove.geojson';
+import sfoeSunol from '~/polys/tracon/c/sfoe-sunol.geojson';
+import sfo10Grove from '~/polys/tracon/c/sfo10-grove.geojson';
+import oakeGrove from '~/polys/tracon/c/oake-grove.geojson';
 
 // D
-import sfowRichmond from './polys/tracon/d/sfow-richmond.geojson';
-import sfowSutro from './polys/tracon/d/sfow-sutro.geojson';
-import sfoeRichmond from './polys/tracon/d/sfoe-richmond.geojson';
-import sfoeSutro from './polys/tracon/d/sfoe-sutro.geojson';
-import oakeRichmond from './polys/tracon/d/oake-richmond.geojson';
-import oakeSutro from './polys/tracon/d/oake-sutro.geojson';
+import sfowRichmond from '~/polys/tracon/d/sfow-richmond.geojson';
+import sfowSutro from '~/polys/tracon/d/sfow-sutro.geojson';
+import sfoeRichmond from '~/polys/tracon/d/sfoe-richmond.geojson';
+import sfoeSutro from '~/polys/tracon/d/sfoe-sutro.geojson';
+import oakeRichmond from '~/polys/tracon/d/oake-richmond.geojson';
+import oakeSutro from '~/polys/tracon/d/oake-sutro.geojson';
 
 ///////////////////////////////////////////////////
 // Base Maps

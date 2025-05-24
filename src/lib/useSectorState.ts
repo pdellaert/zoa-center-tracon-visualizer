@@ -1,4 +1,4 @@
-import { AppDisplayState, TraconAirspaceConfig } from '~/types';
+import { AppDisplayState, TraconAirspaceConfig } from '~/lib/types';
 import { SetStoreFunction } from 'solid-js/store';
 
 export function useSectorState(_store: AppDisplayState, setStore: SetStoreFunction<AppDisplayState>) {

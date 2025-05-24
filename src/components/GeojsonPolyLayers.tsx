@@ -1,4 +1,4 @@
-import { AppDisplayState, TraconPolyDefinition } from '~/types';
+import { AppDisplayState, TraconPolyDefinition } from '~/lib/types';
 import { Component, For, Show } from 'solid-js';
 import { Layer } from 'solid-map-gl';
 import { useLayerManagement } from '~/lib/useLayerManagement';

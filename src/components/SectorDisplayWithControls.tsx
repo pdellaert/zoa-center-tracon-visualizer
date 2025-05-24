@@ -1,5 +1,5 @@
 import { Component, createEffect, createMemo, For, Show } from 'solid-js';
-import { AppDisplayState, TraconAirspaceConfig, TraconAirspaceConfigDependentGroup } from '~/types';
+import { AppDisplayState, TraconAirspaceConfig, TraconAirspaceConfigDependentGroup } from '~/lib/types';
 import { SetStoreFunction } from 'solid-js/store';
 import { Select } from '@kobalte/core/select';
 import { SelectContent, SelectItem, SelectTrigger, SelectValue, Checkbox } from './ui-core';
