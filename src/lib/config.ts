@@ -97,6 +97,11 @@ import sfoeSutro from '~/polys/tracon/d/sfoe-sutro.geojson';
 import oakeRichmond from '~/polys/tracon/d/oake-richmond.geojson';
 import oakeSutro from '~/polys/tracon/d/oake-sutro.geojson';
 
+// FAT
+import fatnChandler from '~/polys/tracon/fat/fatn-chandler.geojson';
+import fatnFriant from '~/polys/tracon/fat/fatn-friant.geojson';
+import fatnSouth from '~/polys/tracon/fat/fatn-south.geojson';
+
 ///////////////////////////////////////////////////
 // Base Maps
 ///////////////////////////////////////////////////
@@ -643,7 +648,46 @@ const B_POLYS: TraconAreaPolys = {
   ],
 };
 
+const FAT_POLYS: TraconAreaPolys = {
+  name: 'FAT',
+  defaultConfig: 'FATN',
+  possibleConfigs: ['FATS', 'FATN'],
+  sectorConfigs: [
+    {
+      sectorName: 'Friant',
+      defaultColor: '#E60049',
+      configPolyUrls: [
+        {
+          configs: ['FATS', 'FATN'],
+          url: fatnFriant,
+        },
+      ],
+    },
+    {
+      sectorName: 'Chandler',
+      defaultColor: '#0BB4FF',
+      configPolyUrls: [
+        {
+          configs: ['FATS', 'FATN'],
+          url: fatnChandler,
+        },
+      ],
+    },
+    {
+      sectorName: 'FAT South',
+      defaultColor: '#E6D800',
+      configPolyUrls: [
+        {
+          configs: ['FATS', 'FATN'],
+          url: fatnSouth,
+        },
+      ],
+    },
+  ],
+};
+
 export const TRACON_POLY_DEFINITIONS: TraconPolyDefinition[] = [
+  { name: 'FAT', polys: FAT_POLYS },
   { name: 'RNO', polys: E_NV_POLYS },
   { name: 'SMF', polys: E_CA_POLYS },
   { name: 'Area A', polys: A_POLYS },

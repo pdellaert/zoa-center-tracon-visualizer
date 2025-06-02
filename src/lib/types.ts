@@ -82,9 +82,21 @@ export interface CenterAirspaceDisplayState {
 ///////////////////////////////////////////////////
 // Tracon interfaces
 ///////////////////////////////////////////////////
-export type TraconAirspaceConfigDependentGroup = 'RNO' | 'SMF' | 'Area A' | 'Area B' | 'Area C' | 'Area D';
+export type TraconAirspaceConfigDependentGroup = 'FAT' | 'RNO' | 'SMF' | 'Area A' | 'Area B' | 'Area C' | 'Area D';
 
-export type TraconAirspaceConfig = 'RNON' | 'RNOS' | 'SMFN' | 'SMFS' | 'SFOW' | 'SFOE' | 'SFO10' | 'OAKE' | 'SJCE' | '';
+export type TraconAirspaceConfig =
+  | 'FATN'
+  | 'FATS'
+  | 'RNON'
+  | 'RNOS'
+  | 'SMFN'
+  | 'SMFS'
+  | 'SFOW'
+  | 'SFOE'
+  | 'SFO10'
+  | 'OAKE'
+  | 'SJCE'
+  | '';
 
 export type TraconAirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';
 
@@ -107,7 +119,10 @@ export type TraconSectorName =
   | 'Foster'
   | 'Laguna'
   | 'Niles'
-  | 'Woodside';
+  | 'Woodside'
+  | 'Friant'
+  | 'Chandler'
+  | 'FAT South';
 
 export interface TraconAirspaceConfigWithPolys {
   sectorName: TraconSectorName;

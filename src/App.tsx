@@ -442,6 +442,15 @@ const App: Component = () => {
                 setStore={setAllStore}
                 hideHeader={true}
               />
+
+              <SectorDisplayWithControls
+                displayType="tracon"
+                airspaceGroup={'FAT'}
+                airspaceConfigOptions={['FATS', 'FATN']}
+                store={allStore}
+                setStore={setAllStore}
+                hideHeader={true}
+              />
             </Show>
             <Show when={activeTab() === 'center'}>
               <SectorDisplayWithControls
