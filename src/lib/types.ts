@@ -122,7 +122,7 @@ export type TraconSectorName =
   | 'Woodside'
   | 'Friant'
   | 'Chandler'
-  | 'FAT South';
+  | 'South';
 
 export interface TraconAirspaceConfigWithPolys {
   sectorName: TraconSectorName;

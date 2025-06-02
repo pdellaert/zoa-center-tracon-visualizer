@@ -674,7 +674,7 @@ const FAT_POLYS: TraconAreaPolys = {
       ],
     },
     {
-      sectorName: 'FAT South',
+      sectorName: 'South',
       defaultColor: '#E6D800',
       configPolyUrls: [
         {
