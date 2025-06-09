@@ -104,6 +104,9 @@ import fatsChandler from '~/polys/tracon/fat/fats-chandler.geojson';
 import fatsFriant from '~/polys/tracon/fat/fats-friant.geojson';
 import fatnSouth from '~/polys/tracon/fat/fatn-south.geojson';
 
+// MIL
+import nlc from '~/polys/tracon/military/nlc.geojson';
+
 ///////////////////////////////////////////////////
 // Base Maps
 ///////////////////////////////////////////////////
@@ -696,6 +699,24 @@ const FAT_POLYS: TraconAreaPolys = {
   ],
 };
 
+const MIL_POLYS: TraconAreaPolys = {
+  name: 'Military',
+  defaultConfig: 'Military',
+  possibleConfigs: ['Military'],
+  sectorConfigs: [
+    {
+      sectorName: 'NLC',
+      defaultColor: '#FD9A5C',
+      configPolyUrls: [
+        {
+          configs: ['Military'],
+          url: nlc,
+        },
+      ],
+    },
+  ],
+};
+
 export const TRACON_POLY_DEFINITIONS: TraconPolyDefinition[] = [
   { name: 'FAT', polys: FAT_POLYS },
   { name: 'RNO', polys: E_NV_POLYS },
@@ -704,4 +725,5 @@ export const TRACON_POLY_DEFINITIONS: TraconPolyDefinition[] = [
   { name: 'Area B', polys: B_POLYS },
   { name: 'Area C', polys: C_POLYS },
   { name: 'Area D', polys: D_POLYS },
+  { name: 'Military', polys: MIL_POLYS },
 ];

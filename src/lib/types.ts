@@ -82,7 +82,15 @@ export interface CenterAirspaceDisplayState {
 ///////////////////////////////////////////////////
 // Tracon interfaces
 ///////////////////////////////////////////////////
-export type TraconAirspaceConfigDependentGroup = 'FAT' | 'RNO' | 'SMF' | 'Area A' | 'Area B' | 'Area C' | 'Area D';
+export type TraconAirspaceConfigDependentGroup =
+  | 'Military'
+  | 'FAT'
+  | 'RNO'
+  | 'SMF'
+  | 'Area A'
+  | 'Area B'
+  | 'Area C'
+  | 'Area D';
 
 export type TraconAirspaceConfig =
   | 'FATN'
@@ -96,6 +104,7 @@ export type TraconAirspaceConfig =
   | 'SFO10'
   | 'OAKE'
   | 'SJCE'
+  | 'Military'
   | '';
 
 export type TraconAirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';
@@ -122,7 +131,8 @@ export type TraconSectorName =
   | 'Woodside'
   | 'Friant'
   | 'Chandler'
-  | 'South';
+  | 'South'
+  | 'NLC';
 
 export interface TraconAirspaceConfigWithPolys {
   sectorName: TraconSectorName;
