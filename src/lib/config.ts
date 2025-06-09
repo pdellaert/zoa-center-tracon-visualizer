@@ -100,6 +100,8 @@ import oakeSutro from '~/polys/tracon/d/oake-sutro.geojson';
 // FAT
 import fatnChandler from '~/polys/tracon/fat/fatn-chandler.geojson';
 import fatnFriant from '~/polys/tracon/fat/fatn-friant.geojson';
+import fatsChandler from '~/polys/tracon/fat/fats-chandler.geojson';
+import fatsFriant from '~/polys/tracon/fat/fats-friant.geojson';
 import fatnSouth from '~/polys/tracon/fat/fatn-south.geojson';
 
 ///////////////////////////////////////////////////
@@ -651,15 +653,19 @@ const B_POLYS: TraconAreaPolys = {
 const FAT_POLYS: TraconAreaPolys = {
   name: 'FAT',
   defaultConfig: 'FATN',
-  possibleConfigs: ['FATS', 'FATN'],
+  possibleConfigs: ['FATN', 'FATS'],
   sectorConfigs: [
     {
       sectorName: 'Friant',
       defaultColor: '#E60049',
       configPolyUrls: [
         {
-          configs: ['FATS', 'FATN'],
+          configs: ['FATN'],
           url: fatnFriant,
+        },
+        {
+          configs: ['FATS'],
+          url: fatsFriant,
         },
       ],
     },
@@ -668,8 +674,12 @@ const FAT_POLYS: TraconAreaPolys = {
       defaultColor: '#0BB4FF',
       configPolyUrls: [
         {
-          configs: ['FATS', 'FATN'],
+          configs: ['FATN'],
           url: fatnChandler,
+        },
+        {
+          configs: ['FATS'],
+          url: fatsChandler,
         },
       ],
     },
@@ -678,7 +688,7 @@ const FAT_POLYS: TraconAreaPolys = {
       defaultColor: '#E6D800',
       configPolyUrls: [
         {
-          configs: ['FATS', 'FATN'],
+          configs: ['FATN', 'FATS'],
           url: fatnSouth,
         },
       ],
