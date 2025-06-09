@@ -14,6 +14,7 @@ interface SectorDisplayWithControlsProps {
   airspaceConfigOptions?: TraconAirspaceConfig[];
   dependentOnConfig?: TraconAirspaceConfig;
   hideHeader?: boolean;
+  hideConfigSelector?: boolean;
 }
 
 export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
@@ -67,7 +68,7 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
 
   return (
     <div>
-      {!isCenter && (
+      {!props.hideConfigSelector && !isCenter && (
         <Show when={typeof props.dependentOnConfig === 'undefined'}>
           <Select
             class="mt-4"

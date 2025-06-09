@@ -455,12 +455,13 @@ const App: Component = () => {
               <SectorDisplayWithControls
                 displayType="tracon"
                 airspaceGroup={'Military'}
-                airspaceConfigOptions={['Military']}
                 store={allStore}
                 setStore={setAllStore}
-                hideHeader={true}
+                hideHeader={false}
+                hideConfigSelector={true}
               />
             </Show>
+
             <Show when={activeTab() === 'center'}>
               <SectorDisplayWithControls
                 displayType="center"

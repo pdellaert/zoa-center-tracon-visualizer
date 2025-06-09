@@ -104,7 +104,7 @@ export type TraconAirspaceConfig =
   | 'SFO10'
   | 'OAKE'
   | 'SJCE'
-  | 'Military'
+  | 'MIL'
   | '';
 
 export type TraconAirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';
@@ -132,7 +132,9 @@ export type TraconSectorName =
   | 'Friant'
   | 'Chandler'
   | 'South'
-  | 'NLC';
+  | 'Lemoore'
+  | 'Fallon'
+  | 'Travis';
 
 export interface TraconAirspaceConfigWithPolys {
   sectorName: TraconSectorName;
