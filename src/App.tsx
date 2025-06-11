@@ -221,7 +221,7 @@ const App: Component = () => {
     }
   });
 
-  const mil: Accessor<TraconAirspaceConfig> = createMemo(() => {
+  const rapcon: Accessor<TraconAirspaceConfig> = createMemo(() => {
     return bayConfig();
   });
 
@@ -458,7 +458,7 @@ const App: Component = () => {
                 airspaceGroup={'RAPCON'}
                 store={allStore}
                 setStore={setAllStore}
-                dependentOnConfig={mil()}
+                dependentOnConfig={rapcon()}
               />
             </Show>
 
