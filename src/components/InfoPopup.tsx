@@ -49,7 +49,7 @@ export const InfoPopup: Component<InfoPopupProps> = (props) => {
                         : getFillColor(polyInfo.poly.layer?.paint as FillPaint),
                     }}
                   >
-                    {polyInfo.poly.source}
+                    {polyInfo.poly.source ? polyInfo.poly.source.replace(/_[A-Z]+$/, '') : ''}
                   </td>
                   <td class="font-mono w-12 text-center ml-3">
                     {polyInfo.poly.properties?.minAlt === 0
