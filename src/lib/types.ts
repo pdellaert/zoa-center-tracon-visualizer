@@ -104,7 +104,6 @@ export type TraconAirspaceConfig =
   | 'SFO10'
   | 'OAKE'
   | 'SJCE'
-  | 'MIL'
   | '';
 
 export type TraconAirportConfig = 'SFOW' | 'SFO19' | 'SFO10' | 'OAKW' | 'OAKE' | 'SJCW' | 'SJCE';

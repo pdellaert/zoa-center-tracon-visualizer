@@ -105,9 +105,10 @@ import fatsFriant from '~/polys/tracon/fat/fats-friant.geojson';
 import fatnSouth from '~/polys/tracon/fat/fatn-south.geojson';
 
 // MIL
-import lemoore from '~/polys/tracon/military/lemoore.geojson';
-import fallon from '~/polys/tracon/military/fallon.geojson';
-import sfowTravis from '~/polys/tracon/military/sfow-travis.geojson';
+import lemoore from '~/polys/tracon/mil/lemoore.geojson';
+import fallon from '~/polys/tracon/mil/fallon.geojson';
+import sfowTravis from '~/polys/tracon/mil/sfow-travis.geojson';
+import sfoeTravis from '~/polys/tracon/mil/sfoe-travis.geojson';
 
 ///////////////////////////////////////////////////
 // Base Maps
@@ -703,15 +704,15 @@ const FAT_POLYS: TraconAreaPolys = {
 
 const MIL_POLYS: TraconAreaPolys = {
   name: 'Military',
-  defaultConfig: 'MIL',
-  possibleConfigs: ['MIL'],
+  defaultConfig: 'SFOW',
+  possibleConfigs: ['SFOW', 'SFOE'],
   sectorConfigs: [
     {
       sectorName: 'Lemoore',
       defaultColor: '#FD9A5C',
       configPolyUrls: [
         {
-          configs: ['MIL'],
+          configs: ['SFOW', 'SFOE'],
           url: lemoore,
         },
       ],
@@ -721,7 +722,7 @@ const MIL_POLYS: TraconAreaPolys = {
       defaultColor: '#317F43',
       configPolyUrls: [
         {
-          configs: ['MIL'],
+          configs: ['SFOW', 'SFOE'],
           url: fallon,
         },
       ],
@@ -731,8 +732,12 @@ const MIL_POLYS: TraconAreaPolys = {
       defaultColor: '#0BB4FF',
       configPolyUrls: [
         {
-          configs: ['MIL'],
+          configs: ['SFOW'],
           url: sfowTravis,
+        },
+        {
+          configs: ['SFOE'],
+          url: sfoeTravis,
         },
       ],
     },

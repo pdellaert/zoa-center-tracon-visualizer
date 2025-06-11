@@ -221,6 +221,10 @@ const App: Component = () => {
     }
   });
 
+  const mil: Accessor<TraconAirspaceConfig> = createMemo(() => {
+    return bayConfig();
+  });
+
   createEffect((isInitialLoad) => {
     const currentBayConfig = bayConfig();
 
@@ -457,8 +461,7 @@ const App: Component = () => {
                 airspaceGroup={'Military'}
                 store={allStore}
                 setStore={setAllStore}
-                hideHeader={false}
-                hideConfigSelector={true}
+                dependentOnConfig={mil()}
               />
             </Show>
 
