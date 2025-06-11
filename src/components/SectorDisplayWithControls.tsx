@@ -1,4 +1,4 @@
-import { Component, createEffect, createMemo, For, Show } from 'solid-js';
+import { Component, createEffect, createMemo, createSignal, For, Show } from 'solid-js';
 import { AppDisplayState, TraconAirspaceConfig, TraconAirspaceConfigDependentGroup } from '~/lib/types';
 import { SetStoreFunction } from 'solid-js/store';
 import { Select } from '@kobalte/core/select';
@@ -18,6 +18,7 @@ interface SectorDisplayWithControlsProps {
 }
 
 export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps> = (props) => {
+  const [isExpanded, setIsExpanded] = createSignal(false);
   const isCenter = props.displayType === 'center';
   const sectorState = useSectorState(props.store, props.setStore);
 
@@ -68,10 +69,34 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
 
   return (
     <div>
-      {!props.hideConfigSelector && !isCenter && (
-        <Show when={typeof props.dependentOnConfig === 'undefined'}>
+      <div class={cn(['flex flex-col space-y-1 mt-2'])}>
+        {(!props.hideHeader || isCenter) && (
+          <div class="text-white flex items-center cursor-pointer group" onClick={() => setIsExpanded(!isExpanded())}>
+            <svg 
+              class={`w-4 h-4 text-gray-400 group-hover:text-white transition-all duration-200 transform ${isExpanded() ? 'rotate-90' : ''} mr-2`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                stroke-linecap="round" 
+                stroke-linejoin="round" 
+                stroke-width="2" 
+                d="M9 5l7 7-7 7" 
+              />
+            </svg>
+            <span class="group-hover:text-white transition-colors duration-200">{props.airspaceGroup}</span>
+          </div>
+        )}
+
+        <Show
+          when={
+            isExpanded() && !props.hideConfigSelector && !isCenter && typeof props.dependentOnConfig === 'undefined'
+          }
+        >
           <Select
-            class="mt-4"
+            class="mt-2"
             options={props.airspaceConfigOptions ?? []}
             value={
               !isCenter
@@ -92,18 +117,8 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
             <SelectContent />
           </Select>
         </Show>
-      )}
 
-      <div
-        class={cn([
-          'flex flex-col space-y-1',
-          isCenter ? 'mt-2' : 'mt-4',
-          { 'mt-2': !isCenter && typeof props.dependentOnConfig === 'undefined' },
-        ])}
-      >
-        {(!props.hideHeader || isCenter) && <div class="text-white">{props.airspaceGroup}</div>}
-
-        {
+        <Show when={isExpanded()}>
           <div class="flex flex-row space-x-2 cursor-pointer">
             <Show when={showCheckAll()}>
               <div class="text-gray-400 hover:text-gray-200 transition text-xs" onClick={() => handleToggleAll(true)}>
@@ -116,25 +131,27 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
               </div>
             </Show>
           </div>
-        }
+        </Show>
 
-        <For each={sectors()}>
-          {(sector) => (
-            <div class="flex justify-between">
-              <Checkbox
-                label={sector.name}
-                checked={sector.isDisplayed}
-                onChange={(val) => handleCheckboxChange(sector.name, val)}
-              />
-              <input
-                type="color"
-                value={sector.color}
-                class="w-6 h-6 mr-2"
-                onChange={(e) => handleColorChange(sector.name, e.target.value)}
-              />
-            </div>
-          )}
-        </For>
+        <Show when={isExpanded()}>
+          <For each={sectors()}>
+            {(sector) => (
+              <div class="flex justify-between">
+                <Checkbox
+                  label={sector.name}
+                  checked={sector.isDisplayed}
+                  onChange={(val) => handleCheckboxChange(sector.name, val)}
+                />
+                <input
+                  type="color"
+                  value={sector.color}
+                  class="w-6 h-6 mr-2"
+                  onChange={(e) => handleColorChange(sector.name, e.target.value)}
+                />
+              </div>
+            )}
+          </For>
+        </Show>
       </div>
     </div>
   );

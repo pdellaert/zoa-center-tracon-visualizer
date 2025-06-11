@@ -435,7 +435,6 @@ const App: Component = () => {
                 airspaceConfigOptions={['SMFS', 'SMFN']}
                 store={allStore}
                 setStore={setAllStore}
-                hideHeader={true}
               />
 
               <SectorDisplayWithControls
@@ -444,7 +443,6 @@ const App: Component = () => {
                 airspaceConfigOptions={['RNOS', 'RNON']}
                 store={allStore}
                 setStore={setAllStore}
-                hideHeader={true}
               />
 
               <SectorDisplayWithControls
@@ -453,7 +451,6 @@ const App: Component = () => {
                 airspaceConfigOptions={['FATS', 'FATN']}
                 store={allStore}
                 setStore={setAllStore}
-                hideHeader={true}
               />
 
               <SectorDisplayWithControls
