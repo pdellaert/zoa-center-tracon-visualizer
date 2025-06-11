@@ -83,7 +83,7 @@ export interface CenterAirspaceDisplayState {
 // Tracon interfaces
 ///////////////////////////////////////////////////
 export type TraconAirspaceConfigDependentGroup =
-  | 'Military'
+  | 'RAPCON'
   | 'FAT'
   | 'RNO'
   | 'SMF'

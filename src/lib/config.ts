@@ -703,7 +703,7 @@ const FAT_POLYS: TraconAreaPolys = {
 };
 
 const MIL_POLYS: TraconAreaPolys = {
-  name: 'Military',
+  name: 'RAPCON',
   defaultConfig: 'SFOW',
   possibleConfigs: ['SFOW', 'SFOE'],
   sectorConfigs: [
@@ -752,5 +752,5 @@ export const TRACON_POLY_DEFINITIONS: TraconPolyDefinition[] = [
   { name: 'Area B', polys: B_POLYS },
   { name: 'Area C', polys: C_POLYS },
   { name: 'Area D', polys: D_POLYS },
-  { name: 'Military', polys: MIL_POLYS },
+  { name: 'RAPCON', polys: MIL_POLYS },
 ];
