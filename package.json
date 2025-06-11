@@ -12,7 +12,7 @@
   "license": "MIT",
   "author": "Ken Greim, Philippe Dellaert",
   "devDependencies": {
-    "@types/node": "^22.15.21",
+    "@types/node": "^22.15.31",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
@@ -20,18 +20,18 @@
   },
   "dependencies": {
     "@corvu/dialog": "^0.2.4",
-    "@kobalte/core": "^0.13.9",
+    "@kobalte/core": "^0.13.10",
     "@solid-primitives/mouse": "^2.1.2",
     "@solid-primitives/storage": "^4.3.2",
-    "@tailwindcss/vite": "^4.1.7",
+    "@tailwindcss/vite": "^4.1.8",
     "clsx": "^2.1.1",
     "color-string": "^2.0.1",
     "lucide-solid": "^0.511.0",
     "mapbox-gl": "^3.12.0",
     "solid-js": "^1.9.7",
     "solid-map-gl": "^1.11.3",
-    "tailwind-merge": "^3.3.0",
-    "tailwindcss": "^4.1.7",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.8",
     "tailwindcss-animate": "^1.0.7"
   }
 }
