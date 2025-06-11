@@ -455,7 +455,7 @@ const App: Component = () => {
 
               <SectorDisplayWithControls
                 displayType="tracon"
-                airspaceGroup={'Military'}
+                airspaceGroup={'RAPCON'}
                 store={allStore}
                 setStore={setAllStore}
                 dependentOnConfig={mil()}
