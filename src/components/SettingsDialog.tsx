@@ -30,14 +30,14 @@ export const SettingsDialog: Component<SettingsProps> = (props) => {
         <div class="flex items-center">
           <Checkbox
             checked={props.settings.popup.followMouse}
-            onChange={(val) => props.setSettings('popup', 'followMouse', val)}
+            onChange={(val: boolean) => props.setSettings('popup', 'followMouse', val)}
           ></Checkbox>
           <label class="ml-1.5">Popup: follow mouse</label>
         </div>
         <div class="flex items-center">
           <Checkbox
             checked={props.settings.popup.showUncheckedSectors}
-            onChange={(val) => props.setSettings('popup', 'showUncheckedSectors', val)}
+            onChange={(val: boolean) => props.setSettings('popup', 'showUncheckedSectors', val)}
           ></Checkbox>
           <label class="ml-1.5">Popup: show information for non-displayed sectors</label>
         </div>
@@ -45,7 +45,7 @@ export const SettingsDialog: Component<SettingsProps> = (props) => {
           <div class="flex items-center">
             <Checkbox
               checked={props.settings.popup.uncheckedSectorsInVisibleSectorsOnly}
-              onChange={(val) => props.setSettings('popup', 'uncheckedSectorsInVisibleSectorsOnly', val)}
+              onChange={(val: boolean) => props.setSettings('popup', 'uncheckedSectorsInVisibleSectorsOnly', val)}
             ></Checkbox>
             <label class="ml-1.5">
               Popup: show information for non-displayed sectors only when hovering visible sectors

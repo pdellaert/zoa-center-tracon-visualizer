@@ -282,7 +282,7 @@ const App: Component = () => {
                   <Checkbox
                     label={m.baseMap.name}
                     checked={m.checked}
-                    onChange={(val) => {
+                    onChange={(val: boolean) => {
                       setPersistedBaseMaps(
                         (m1) => m1.id === m.id,
                         produce((m2) => {

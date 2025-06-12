@@ -179,7 +179,7 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
                 <Checkbox
                   label={sector.name}
                   checked={sector.isDisplayed}
-                  onChange={(val) => handleCheckboxChange(sector.name, val)}
+                  onChange={(val: boolean) => handleCheckboxChange(sector.name, val)}
                 />
                 <input
                   type="color"
