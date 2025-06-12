@@ -71,22 +71,76 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
     <div>
       <div class={cn(['flex flex-col space-y-1 mt-2'])}>
         {(!props.hideHeader || isCenter) && (
-          <div class="text-white flex items-center cursor-pointer group" onClick={() => setIsExpanded(!isExpanded())}>
-            <svg 
-              class={`w-4 h-4 text-gray-400 group-hover:text-white transition-all duration-200 transform ${isExpanded() ? 'rotate-90' : ''} mr-2`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24" 
+          <div class="text-white flex items-center cursor-pointer group">
+            <svg
+              class={`w-4 h-4 text-gray-400 group-hover:text-white transition-all duration-200 transform ${isExpanded() ? 'rotate-90' : ''} mr-2 cursor-pointer`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
+              onClick={() => setIsExpanded(!isExpanded())}
             >
-              <path 
-                stroke-linecap="round" 
-                stroke-linejoin="round" 
-                stroke-width="2" 
-                d="M9 5l7 7-7 7" 
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
-            <span class="group-hover:text-white transition-colors duration-200">{props.airspaceGroup}</span>
+            <span
+              class="group-hover:text-white transition-colors duration-200 cursor-pointer"
+              onClick={() => setIsExpanded(!isExpanded())}
+            >
+              {props.airspaceGroup}
+            </span>
+
+            <div class="flex ml-auto space-x-2">
+              <Show when={showCheckAll()}>
+                <div
+                  class="text-gray-400 hover:text-gray-200 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleAll(true);
+                  }}
+                  title="Check all"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+              </Show>
+              <Show when={showUncheckAll()}>
+                <div
+                  class="text-gray-400 hover:text-gray-200 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleAll(false);
+                  }}
+                  title="Uncheck all"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+              </Show>
+            </div>
           </div>
         )}
 
@@ -116,21 +170,6 @@ export const SectorDisplayWithControls: Component<SectorDisplayWithControlsProps
             </SelectTrigger>
             <SelectContent />
           </Select>
-        </Show>
-
-        <Show when={isExpanded()}>
-          <div class="flex flex-row space-x-2 cursor-pointer">
-            <Show when={showCheckAll()}>
-              <div class="text-gray-400 hover:text-gray-200 transition text-xs" onClick={() => handleToggleAll(true)}>
-                Check all
-              </div>
-            </Show>
-            <Show when={showUncheckAll()}>
-              <div class="text-gray-400 hover:text-gray-200 transition text-xs" onClick={() => handleToggleAll(false)}>
-                Uncheck all
-              </div>
-            </Show>
-          </div>
         </Show>
 
         <Show when={isExpanded()}>
