@@ -181,35 +181,86 @@ export interface TraconSectorDisplayState {
 }
 
 ///////////////////////////////////////////////////
-// Airport & Arrival interfaces
+// Airport & Procedure interfaces
 ///////////////////////////////////////////////////
-export interface AirportSection {
-  id: string;
-  isExpanded: boolean;
-  arrivals: ArrivalProcedureDisplayState[];
-}
+export type ProcedureKind = 'sid' | 'star' | 'app';
 
-export interface ArrivalProcedure {
-  arrivalIdentifier: string;
+export type LegType =
+  | 'Initial'
+  | 'TrackToFix'
+  | 'CourseToFix'
+  | 'DirectToFix'
+  | 'HeadingToAltitude'
+  | 'CourseToAltitude'
+  | 'HeadingToManual'
+  | 'CourseToManual'
+  | 'FromFixToManual'
+  | 'ManualTermination'
+  | 'HeadingToIntercept'
+  | 'HeadingToDme'
+  | 'ConstantRadiusArc'
+  | 'SingleCircuitTermination'
+  | 'Turn';
+
+export type FixDescription =
+  | 'Essential'
+  | 'ContinuousSegmentEnd'
+  | 'FlyOver'
+  | 'RunwayHelipad'
+  | 'InitialApproach'
+  | 'IntermediateApproach'
+  | 'FinalApproachCourse'
+  | 'FinalApproach'
+  | 'TurnFinalApproach'
+  | 'NamedStepdown'
+  | 'Omnidirectional'
+  | 'MissedApproach'
+  | 'MissedApproachFirstLeg';
+
+export interface Procedure {
+  kind: ProcedureKind;
+  airport: string;
+  identifier: string;
   sequences: Sequence[];
-}
-
-export interface ArrivalProcedureDisplayState {
-  id: string;
-  isDisplayed: boolean;
-  procedure: ArrivalProcedure;
 }
 
 export interface Sequence {
   transition?: string;
-  transitionType: 'AreaNavigationCommon' | 'AreaNavigationEnroute' | 'AreaNavigationRunway';
+  transitionType: string;
   points: Point[];
+  // Client-side annotation: coords of the runway this SID sequence departs from,
+  // resolved by looking up matching RunwayHelipad points in the airport's approaches.
+  runwayOrigin?: { latitude: number; longitude: number };
 }
 
 export interface Point {
-  identifier: string;
-  latitude: number;
-  longitude: number;
-  minAltitude?: string;
-  maxAltitude?: string;
+  identifier: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  minAltitude?: string | null;
+  maxAltitude?: string | null;
+  legType: LegType;
+  course: number;
+  descriptions: FixDescription[];
+}
+
+export interface ProcedureDisplayState {
+  id: string;
+  isDisplayed: boolean;
+  procedure: Procedure;
+}
+
+export interface ProcedureSubsection {
+  isExpanded: boolean;
+  items: ProcedureDisplayState[];
+}
+
+export interface AirportSection {
+  id: string;
+  isExpanded: boolean;
+  subsections: {
+    sids: ProcedureSubsection;
+    stars: ProcedureSubsection;
+    apps: ProcedureSubsection;
+  };
 }
