@@ -13,6 +13,9 @@ const MANUAL_ARROW_DISTANCE_NM = 5;
 const ARROW_WING_LENGTH_NM = 0.6;
 const ARROW_WING_ANGLE_DEG = 30;
 const EARTH_RADIUS_NM = 3440.065;
+const ARC_THRESHOLD_DEG = 60;
+const ARC_DISTANCE_NM = MANUAL_ARROW_DISTANCE_NM / 2;
+const ARC_STEPS = 12;
 
 export const makeAltitudesString = (minAlt?: string | null, maxAlt?: string | null) => {
   if (minAlt && maxAlt) {
@@ -62,6 +65,62 @@ const destinationPoint = (lat: number, lon: number, bearingDeg: number, distance
   return { latitude: (lat2 * 180) / Math.PI, longitude: (lon2 * 180) / Math.PI };
 };
 
+const bearingBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const y = Math.sin(dLon) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+};
+
+const distanceBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const dPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_NM * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const runwayHeading = (transition?: string): number | null => {
+  if (!transition) return null;
+  const m = transition.match(/^RW(\d{1,2})/);
+  if (!m) return null;
+  return (parseInt(m[1], 10) * 10) % 360;
+};
+
+const angleDifference = (a: number, b: number): number =>
+  Math.abs(((b - a + 540) % 360) - 180);
+
+const interpolateBearing = (from: number, to: number, t: number): number => {
+  const diff = ((to - from + 540) % 360) - 180;
+  return (from + diff * t + 360) % 360;
+};
+
+/**
+ * Generate arc points that smoothly transition from rwyHeading to courseHeading
+ * over ARC_DISTANCE_NM, starting at the given position. Returns the arc coords
+ * (excluding the start, which is already in lineCoords) and the final position.
+ */
+const generateArcPoints = (
+  start: { latitude: number; longitude: number },
+  rwyHeading: number,
+  courseHeading: number,
+  arcDist: number = ARC_DISTANCE_NM,
+): { coords: [number, number][]; end: { latitude: number; longitude: number } } => {
+  const stepDist = arcDist / ARC_STEPS;
+  const coords: [number, number][] = [];
+  let pos = start;
+  for (let i = 1; i <= ARC_STEPS; i++) {
+    const t = i / ARC_STEPS;
+    const bearing = interpolateBearing(rwyHeading, courseHeading, t);
+    pos = destinationPoint(pos.latitude, pos.longitude, bearing, stepDist);
+    coords.push([pos.longitude, pos.latitude]);
+  }
+  return { coords, end: pos };
+};
+
 export interface FixFeature {
   type: 'Feature';
   geometry: { type: 'Point'; coordinates: [number, number] };
@@ -106,9 +165,8 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
 
   let currentCoords: [number, number][] = [];
   let previous: { latitude: number; longitude: number } | null = null;
-  // After a manual-termination arrow, the segment from arrow tip to the next
-  // real fix is drawn dashed to indicate ATC vectors (undefined path).
   let dashOrigin: [number, number] | null = null;
+  let isAtRunwayOrigin = false;
 
   if (kind === 'sid' && sequence.runwayOrigin) {
     currentCoords.push([sequence.runwayOrigin.longitude, sequence.runwayOrigin.latitude]);
@@ -116,6 +174,7 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
       latitude: sequence.runwayOrigin.latitude,
       longitude: sequence.runwayOrigin.longitude,
     };
+    isAtRunwayOrigin = true;
   }
 
   for (const point of sequence.points) {
@@ -135,15 +194,29 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
 
     if (ARROW_LEGTYPES.includes(point.legType)) {
       if (previous) {
+        const rwyHdg = isAtRunwayOrigin ? runwayHeading(sequence.transition) : null;
+        const needsArc =
+          rwyHdg !== null && angleDifference(rwyHdg, point.course) > ARC_THRESHOLD_DEG;
+
+        let straightStart: { latitude: number; longitude: number };
+        if (needsArc) {
+          const arc = generateArcPoints(previous, rwyHdg!, point.course);
+          currentCoords.push(...arc.coords);
+          straightStart = arc.end;
+        } else {
+          straightStart = previous;
+        }
+
+        const straightDist = needsArc
+          ? MANUAL_ARROW_DISTANCE_NM - ARC_DISTANCE_NM
+          : MANUAL_ARROW_DISTANCE_NM;
         const tip = destinationPoint(
-          previous.latitude,
-          previous.longitude,
+          straightStart.latitude,
+          straightStart.longitude,
           point.course,
-          MANUAL_ARROW_DISTANCE_NM,
+          straightDist,
         );
-        // Extend the solid line to the arrow tip
         currentCoords.push([tip.longitude, tip.latitude]);
-        // Close the current solid segment
         flushSegment(lineSegments, currentCoords, false);
         currentCoords = [];
 
@@ -176,6 +249,7 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
         dashOrigin = [tip.longitude, tip.latitude];
         previous = tip;
       }
+      isAtRunwayOrigin = false;
       continue;
     }
 
@@ -183,13 +257,34 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
 
     const coord: [number, number] = [point.longitude, point.latitude];
 
-    // If we're resuming after a manual-termination arrow, draw a dashed
-    // segment from the arrow tip to this fix, then start a new solid segment.
     if (dashOrigin) {
       lineSegments.push({ coords: [dashOrigin, coord], dashed: true });
       dashOrigin = null;
       currentCoords = [coord];
     } else {
+      // Arc from runway if the angle to this fix is steep
+      if (isAtRunwayOrigin && previous) {
+        const rwyHdg = runwayHeading(sequence.transition);
+        if (rwyHdg !== null) {
+          const bearing = bearingBetween(
+            previous.latitude,
+            previous.longitude,
+            point.latitude,
+            point.longitude,
+          );
+          if (angleDifference(rwyHdg, bearing) > ARC_THRESHOLD_DEG) {
+            const dist = distanceBetween(
+              previous.latitude,
+              previous.longitude,
+              point.latitude,
+              point.longitude,
+            );
+            const arcDist = Math.min(dist / 2, ARC_DISTANCE_NM);
+            const arc = generateArcPoints(previous, rwyHdg, bearing, arcDist);
+            currentCoords.push(...arc.coords);
+          }
+        }
+      }
       currentCoords.push(coord);
     }
 
@@ -199,6 +294,7 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
       properties: { text: formatFixLabel(point, kind), identifier: point.identifier ?? '' },
     });
     previous = { latitude: point.latitude, longitude: point.longitude };
+    isAtRunwayOrigin = false;
   }
 
   flushSegment(lineSegments, currentCoords, false);
