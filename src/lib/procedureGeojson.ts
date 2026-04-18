@@ -74,22 +74,44 @@ export interface ArrowFeature {
   properties: Record<string, never>;
 }
 
+export interface LineSegment {
+  coords: [number, number][];
+  dashed: boolean;
+}
+
+export interface LineFeature {
+  type: 'Feature';
+  geometry: { type: 'LineString'; coordinates: [number, number][] };
+  properties: { dashed: boolean };
+}
+
 export interface SequenceGeometry {
-  lineCoords: [number, number][];
+  lineSegments: LineSegment[];
   fixFeatures: FixFeature[];
   arrowFeatures: ArrowFeature[];
 }
 
+const flushSegment = (
+  segments: LineSegment[],
+  coords: [number, number][],
+  dashed: boolean,
+): void => {
+  if (coords.length >= 2) segments.push({ coords: [...coords], dashed });
+};
+
 export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): SequenceGeometry => {
-  const lineCoords: [number, number][] = [];
+  const lineSegments: LineSegment[] = [];
   const fixFeatures: FixFeature[] = [];
   const arrowFeatures: ArrowFeature[] = [];
-  let previous: { latitude: number; longitude: number } | null = null;
 
-  // SID sequences departing from a known runway: seed the line at the runway threshold
-  // so the procedure visibly starts at the airport, not at the first waypoint.
+  let currentCoords: [number, number][] = [];
+  let previous: { latitude: number; longitude: number } | null = null;
+  // After a manual-termination arrow, the segment from arrow tip to the next
+  // real fix is drawn dashed to indicate ATC vectors (undefined path).
+  let dashOrigin: [number, number] | null = null;
+
   if (kind === 'sid' && sequence.runwayOrigin) {
-    lineCoords.push([sequence.runwayOrigin.longitude, sequence.runwayOrigin.latitude]);
+    currentCoords.push([sequence.runwayOrigin.longitude, sequence.runwayOrigin.latitude]);
     previous = {
       latitude: sequence.runwayOrigin.latitude,
       longitude: sequence.runwayOrigin.longitude,
@@ -97,12 +119,9 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
   }
 
   for (const point of sequence.points) {
-    // APP: a MissedApproach or MissedApproachFirstLeg tag marks the end of the approach.
-    // If the boundary point is the runway (RunwayHelipad), render it so the line reaches
-    // the threshold; otherwise drop it. Either way, stop processing this sequence.
     if (kind === 'app' && isMissedApproachBoundary(point)) {
       if (isRunwayThreshold(point) && hasCoords(point)) {
-        lineCoords.push([point.longitude, point.latitude]);
+        currentCoords.push([point.longitude, point.latitude]);
         fixFeatures.push({
           type: 'Feature',
           geometry: { type: 'Point', coordinates: [point.longitude, point.latitude] },
@@ -112,10 +131,8 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
       break;
     }
 
-    // SID: pure altitude-capture legs have no coords
     if (kind === 'sid' && SID_SKIP_LEGTYPES.includes(point.legType)) continue;
 
-    // Manual-termination legs (any kind) render as a line ending in an arrowhead chevron
     if (ARROW_LEGTYPES.includes(point.legType)) {
       if (previous) {
         const tip = destinationPoint(
@@ -124,7 +141,12 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
           point.course,
           MANUAL_ARROW_DISTANCE_NM,
         );
-        lineCoords.push([tip.longitude, tip.latitude]);
+        // Extend the solid line to the arrow tip
+        currentCoords.push([tip.longitude, tip.latitude]);
+        // Close the current solid segment
+        flushSegment(lineSegments, currentCoords, false);
+        currentCoords = [];
+
         const backBearing = (point.course + 180) % 360;
         const leftWing = destinationPoint(
           tip.latitude,
@@ -150,6 +172,8 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
           },
           properties: {},
         });
+
+        dashOrigin = [tip.longitude, tip.latitude];
         previous = tip;
       }
       continue;
@@ -157,33 +181,49 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
 
     if (!hasCoords(point)) continue;
 
-    lineCoords.push([point.longitude, point.latitude]);
+    const coord: [number, number] = [point.longitude, point.latitude];
+
+    // If we're resuming after a manual-termination arrow, draw a dashed
+    // segment from the arrow tip to this fix, then start a new solid segment.
+    if (dashOrigin) {
+      lineSegments.push({ coords: [dashOrigin, coord], dashed: true });
+      dashOrigin = null;
+      currentCoords = [coord];
+    } else {
+      currentCoords.push(coord);
+    }
+
     fixFeatures.push({
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [point.longitude, point.latitude] },
+      geometry: { type: 'Point', coordinates: coord },
       properties: { text: formatFixLabel(point, kind), identifier: point.identifier ?? '' },
     });
     previous = { latitude: point.latitude, longitude: point.longitude };
   }
 
-  return { lineCoords, fixFeatures, arrowFeatures };
+  flushSegment(lineSegments, currentCoords, false);
+
+  return { lineSegments, fixFeatures, arrowFeatures };
 };
+
+export const lineSegmentsToFeatures = (segments: LineSegment[]): LineFeature[] =>
+  segments.map((seg) => ({
+    type: 'Feature',
+    geometry: { type: 'LineString', coordinates: seg.coords },
+    properties: { dashed: seg.dashed },
+  }));
 
 export interface ProcedureSequenceGeometry {
   sequence: Sequence;
-  lineCoords: [number, number][];
+  lineSegments: LineSegment[];
   arrowFeatures: ArrowFeature[];
 }
 
 export interface ProcedureGeometry {
   sequences: ProcedureSequenceGeometry[];
-  fixFeatures: FixFeature[]; // deduplicated across all sequences of this procedure
+  fixFeatures: FixFeature[];
 }
 
-/**
- * Prefer the fix feature with the richer label — annotations (IAF/IF/FAF) and
- * altitude constraints make the label longer, so string length is a good proxy.
- */
 const pickBetterFix = (a: FixFeature, b: FixFeature): FixFeature =>
   b.properties.text.length > a.properties.text.length ? b : a;
 
@@ -195,7 +235,7 @@ export const buildProcedureGeometry = (procedure: Procedure): ProcedureGeometry 
     const geom = buildSequenceGeometry(sequence, procedure.kind);
     sequencesGeom.push({
       sequence,
-      lineCoords: geom.lineCoords,
+      lineSegments: geom.lineSegments,
       arrowFeatures: geom.arrowFeatures,
     });
     for (const feat of geom.fixFeatures) {
@@ -220,12 +260,6 @@ export const sequenceLayerId = (procedure: Procedure, sequence: Sequence): strin
 export const procedureLayerId = (procedure: Procedure): string =>
   `${procedure.kind}-${procedure.airport}-${procedure.identifier}`;
 
-/**
- * Aggregate fix features across every displayed procedure and dedup by fix
- * identifier. Two airports sharing a common arrival (e.g., KSFO PIRAT3 and
- * KOAK PIRAT3) overlap on many fixes; rendering them once avoids doubled
- * labels while keeping both procedure lines drawn independently.
- */
 export const aggregateFixFeatures = (procedures: Procedure[]): FixFeature[] => {
   const bestByIdentifier = new Map<string, FixFeature>();
   for (const procedure of procedures) {

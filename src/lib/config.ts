@@ -120,7 +120,8 @@ import sfoeTravis from '~/polys/tracon/mil/sfoe-travis.geojson';
 ///////////////////////////////////////////////////
 // Base Maps
 ///////////////////////////////////////////////////
-export const NAVDATA_API_URL = 'https://navdata.oakartcc.org';
+//export const NAVDATA_API_URL = 'https://navdata.oakartcc.org';
+export const NAVDATA_API_URL = 'http://localhost:5000';
 export const NAVDATA_API_VERSION = 'v1';
 
 const NAVDATA_PATH_BY_KIND: Record<ProcedureKind, string> = {
