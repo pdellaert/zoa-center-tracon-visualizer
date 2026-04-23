@@ -14,7 +14,7 @@ import {
   PersistedBaseMapState,
   PopupState,
   Settings,
-  ArrivalProcedure,
+  Procedure,
   TraconAirspaceConfig,
   TraconAirportConfig,
   TraconAreaPolys,
@@ -40,7 +40,7 @@ import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geo
 import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
 import { ProceduresDialog } from '~/components/ProceduresDialog';
-import { ArrivalPoints } from '~/components/ArrivalPoints';
+import { ProcedurePoints } from '~/components/ProcedurePoints';
 import { ShareButton } from '~/components/ShareButton';
 import {
   getURLStateParam,
@@ -168,7 +168,7 @@ const App: Component = () => {
     vis: false,
   });
 
-  const [displayedArrivals, setDisplayedArrivals] = createSignal<ArrivalProcedure[]>([]);
+  const [displayedProcedures, setDisplayedProcedures] = createSignal<Procedure[]>([]);
   const [isProceduresOpen, setIsProceduresOpen] = createSignal(false);
 
   const altitudeHover = (evt: MapMouseEvent) => {
@@ -209,13 +209,19 @@ const App: Component = () => {
     else setCursor('grab');
   });
 
-  const handleArrivalToggle = (arrival: ArrivalProcedure, isDisplayed: boolean) => {
-    setDisplayedArrivals((prev) => {
+  const handleProcedureToggle = (procedure: Procedure, isDisplayed: boolean) => {
+    setDisplayedProcedures((prev) => {
       if (isDisplayed) {
-        return [...prev, arrival];
-      } else {
-        return prev.filter((a) => a.arrivalIdentifier !== arrival.arrivalIdentifier);
+        return [...prev, procedure];
       }
+      return prev.filter(
+        (p) =>
+          !(
+            p.kind === procedure.kind &&
+            p.airport === procedure.airport &&
+            p.identifier === procedure.identifier
+          ),
+      );
     });
   };
 
@@ -614,14 +620,14 @@ const App: Component = () => {
           <GeojsonPolySources sources={allSources} />
           <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} />
           <GeojsonPolyLayers displayStateStore={allStore} type="center" />
-          <ArrivalPoints arrivals={displayedArrivals()} />
+          <ProcedurePoints procedures={displayedProcedures()} />
         </MapGL>
       </div>
 
       <ProceduresDialog
         isOpen={isProceduresOpen()}
         onClose={() => setIsProceduresOpen(false)}
-        onArrivalToggle={handleArrivalToggle}
+        onProcedureToggle={handleProcedureToggle}
       />
     </div>
   );

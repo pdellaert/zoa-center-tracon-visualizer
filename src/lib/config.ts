@@ -1,4 +1,11 @@
-import { CenterAreaDefinition, BaseMap, MapStyle, TraconAreaPolys, TraconPolyDefinition } from '~/lib/types';
+import {
+  CenterAreaDefinition,
+  BaseMap,
+  MapStyle,
+  ProcedureKind,
+  TraconAreaPolys,
+  TraconPolyDefinition,
+} from '~/lib/types';
 import { DEFAULT_MAP_STYLE } from '~/lib/defaults';
 
 ///////////////////////////////////////////////////
@@ -114,6 +121,16 @@ import sfoeTravis from '~/polys/tracon/mil/sfoe-travis.geojson';
 // Base Maps
 ///////////////////////////////////////////////////
 export const NAVDATA_API_URL = 'https://navdata.oakartcc.org';
+export const NAVDATA_API_VERSION = 'v1';
+
+const NAVDATA_PATH_BY_KIND: Record<ProcedureKind, string> = {
+  sid: 'departures',
+  star: 'arrivals',
+  app: 'approaches',
+};
+
+export const navdataUrl = (kind: ProcedureKind, airport: string) =>
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/${NAVDATA_PATH_BY_KIND[kind]}/${airport}`;
 
 export const MAP_STYLES: MapStyle[] = [
   DEFAULT_MAP_STYLE,

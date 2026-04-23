@@ -33,17 +33,22 @@ export const BaseMapColorSync: Component<{ isDark: boolean }> = (props) => {
         }
       }
 
-      // Procedure layers (arrival text labels, waypoint circles)
+      // Procedure layers (text labels, waypoint circles, line casings)
       const textColor = dark ? '#ffffff' : '#000000';
       const circleColor = dark ? '#ffffff' : '#000000';
       const circleStrokeColor = dark ? '#000000' : '#ffffff';
+      const casingColor = dark ? '#000000' : '#ffffff';
+
+      const procedureLineCasingPrefix = /^(sid|star|app)-(line-casing|arrow-casing)-/;
 
       for (const layer of ctx.map.getStyle().layers) {
         if (layer.id.endsWith('-text-layer')) {
           ctx.map.setPaintProperty(layer.id, 'text-color', textColor);
-        } else if (layer.id.startsWith('arrival-points-')) {
+        } else if (layer.id === 'procedure-fix-points') {
           ctx.map.setPaintProperty(layer.id, 'circle-color', circleColor);
           ctx.map.setPaintProperty(layer.id, 'circle-stroke-color', circleStrokeColor);
+        } else if (procedureLineCasingPrefix.test(layer.id)) {
+          ctx.map.setPaintProperty(layer.id, 'line-color', casingColor);
         }
       }
 
