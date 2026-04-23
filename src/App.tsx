@@ -170,8 +170,23 @@ const App: Component = () => {
 
   const [displayedProcedures, setDisplayedProcedures] = createSignal<Procedure[]>([]);
   const [isProceduresOpen, setIsProceduresOpen] = createSignal(false);
+  const [is3D, setIs3D] = createSignal(false);
+
+  const toggle3D = () => {
+    const newIs3D = !is3D();
+    setIs3D(newIs3D);
+    setViewport((v) => ({
+      ...v,
+      pitch: newIs3D ? 50 : 0,
+      bearing: newIs3D ? -15 : 0,
+    }));
+  };
 
   const altitudeHover = (evt: MapMouseEvent) => {
+    if (is3D()) {
+      setPopup('vis', false);
+      return;
+    }
     if (!evt.target.isStyleLoaded()) return;
     const features: GeoJSONFeature[] = evt.target.queryRenderedFeatures(evt.point, {
       filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['has', 'minAlt'], ['has', 'maxAlt']],
@@ -600,7 +615,15 @@ const App: Component = () => {
           />
         </div>
 
-        <MapReset viewport={viewport()} setViewport={setViewport} />
+        <div class="absolute top-5 right-5 z-50 flex space-x-2">
+          <MapReset viewport={viewport()} setViewport={setViewport} />
+          <div
+            class="text-gray-700 font-bold text-sm hover:cursor-pointer border border-gray-400 rounded p-1 bg-white/50 hover:bg-gray-300/50 transition select-none"
+            onClick={toggle3D}
+          >
+            {is3D() ? '2D' : '3D'}
+          </div>
+        </div>
 
         <MapGL
           options={{
@@ -618,8 +641,8 @@ const App: Component = () => {
           <BaseMaps persistedMapsState={persistedBaseMaps} mountedMapsState={mountedBaseMaps} />
           <BaseMapColorSync isDark={mapStyle().label === 'World Dark'} />
           <GeojsonPolySources sources={allSources} />
-          <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} />
-          <GeojsonPolyLayers displayStateStore={allStore} type="center" />
+          <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} is3D={is3D} />
+          <GeojsonPolyLayers displayStateStore={allStore} type="center" is3D={is3D} />
           <ProcedurePoints procedures={displayedProcedures()} />
         </MapGL>
       </div>

@@ -41,10 +41,10 @@ const comparePolyAlts = (p1: mapboxgl.MapboxGeoJSONFeature, p2: mapboxgl.MapboxG
 
 const getFillColor = (paint: FillPaint | null | undefined): string => {
   if (paint === null || paint === undefined) {
-    return '#4b5563'; // Tailwind default gray-600;
+    return '#4b5563';
   }
-  let c = paint['fill-color'] as unknown as RgbaDecimal;
-  let hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
+  const c = paint['fill-color'] as unknown as RgbaDecimal;
+  const hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
   if (hex) {
     return hex;
   } else {
@@ -57,7 +57,7 @@ const isTransparentFill = (paint: FillPaint | undefined | null): boolean => {
     return true;
   }
 
-  let c = paint['fill-color'] as unknown as RgbaDecimal;
+  const c = paint['fill-color'] as unknown as RgbaDecimal;
   return c.a === 0;
 };
 

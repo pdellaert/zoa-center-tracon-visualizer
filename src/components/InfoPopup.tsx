@@ -46,7 +46,7 @@ export const InfoPopup: Component<InfoPopupProps> = (props) => {
                     )}
                     style={{
                       color: polyInfo.isTransparent
-                        ? '#4b5563' // Tailwind default gray-600
+                        ? '#4b5563'
                         : getFillColor(polyInfo.poly.layer?.paint as FillPaint),
                     }}
                   >

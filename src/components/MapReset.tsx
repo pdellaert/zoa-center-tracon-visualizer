@@ -20,7 +20,7 @@ export const MapReset: Component<MapResetProps> = (props) => {
   return (
     <Show when={displayed()}>
       <div
-        class="absolute top-5 right-5 z-50 text-gray-700 font-bold text-sm hover:cursor-pointer border border-gray-400 rounded p-1 bg-white/50 hover:bg-gray-300/50 transition"
+        class="text-gray-700 font-bold text-sm hover:cursor-pointer border border-gray-400 rounded p-1 bg-white/50 hover:bg-gray-300/50 transition"
         onClick={() => props.setViewport(DEFAULT_VIEWPORT)}
       >
         Reset map view
