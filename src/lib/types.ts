@@ -1,4 +1,4 @@
-import { FillLayerSpecification } from 'mapbox-gl';
+import { FillExtrusionLayerSpecification, FillLayerSpecification } from 'mapbox-gl';
 
 ///////////////////////////////////////////////////
 // Common interfaces
@@ -48,6 +48,7 @@ export type RgbaDecimal = {
 };
 
 export type FillPaint = FillLayerSpecification['paint'];
+export type FillExtrusionPaint = FillExtrusionLayerSpecification['paint'];
 
 export interface AppDisplayState {
   centerDisplayStates: CenterAirspaceDisplayState[];

@@ -9,6 +9,7 @@ import {
   CenterAirspaceDisplayState,
   AppDisplayState,
   CenterAreaDefinition,
+  FillExtrusionPaint,
   FillPaint,
   MountedBaseMapState,
   PersistedBaseMapState,
@@ -36,7 +37,7 @@ import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers';
 import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls';
 import { SettingsDialog } from '~/components/SettingsDialog';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
-import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson';
+import { getUniqueLayers, isTransparentFill, isTransparentFillExtrusion, getGeojsonSources } from '~/lib/geojson';
 import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
 import { ProceduresDialog } from '~/components/ProceduresDialog';
@@ -170,20 +171,35 @@ const App: Component = () => {
 
   const [displayedProcedures, setDisplayedProcedures] = createSignal<Procedure[]>([]);
   const [isProceduresOpen, setIsProceduresOpen] = createSignal(false);
+  const [is3D, setIs3D] = createSignal(false);
+
+  const toggle3D = () => {
+    const newIs3D = !is3D();
+    setIs3D(newIs3D);
+    setViewport((v) => ({
+      ...v,
+      pitch: newIs3D ? 50 : 0,
+      bearing: newIs3D ? -15 : 0,
+    }));
+  };
 
   const altitudeHover = (evt: MapMouseEvent) => {
     if (!evt.target.isStyleLoaded()) return;
     const features: GeoJSONFeature[] = evt.target.queryRenderedFeatures(evt.point, {
       filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['has', 'minAlt'], ['has', 'maxAlt']],
     });
-    const fillLayers = getUniqueLayers(features.filter((f) => f.layer?.type == 'fill'));
+    const layerType = is3D() ? 'fill-extrusion' : 'fill';
+    const fillLayers = getUniqueLayers(features.filter((f) => f.layer?.type == layerType));
     if (fillLayers.length > 0) {
       logIfDev(fillLayers);
       let transparentLayers: GeoJSONFeature[] = [];
       let visibleLayers: GeoJSONFeature[] = [];
-      fillLayers.forEach((l) =>
-        isTransparentFill(l.layer?.paint as FillPaint) ? transparentLayers.push(l) : visibleLayers.push(l),
-      );
+      fillLayers.forEach((l) => {
+        const transparent = is3D()
+          ? isTransparentFillExtrusion(l.layer?.paint as FillExtrusionPaint)
+          : isTransparentFill(l.layer?.paint as FillPaint);
+        transparent ? transparentLayers.push(l) : visibleLayers.push(l);
+      });
       if (settings.popup.showUncheckedSectors) {
         setPopup(
           produce((state) => {
@@ -585,7 +601,7 @@ const App: Component = () => {
         <Footer />
       </div>
       <div class="grow relative">
-        <InfoPopup popupState={popup} settings={settings} />
+        <InfoPopup popupState={popup} settings={settings} is3D={is3D} />
 
         <div class="absolute top-5 left-5 z-50 flex space-x-2">
           <SettingsDialog settings={settings} setSettings={setSettings} />
@@ -600,7 +616,15 @@ const App: Component = () => {
           />
         </div>
 
-        <MapReset viewport={viewport()} setViewport={setViewport} />
+        <div class="absolute top-5 right-5 z-50 flex space-x-2">
+          <MapReset viewport={viewport()} setViewport={setViewport} />
+          <div
+            class="text-gray-700 font-bold text-sm hover:cursor-pointer border border-gray-400 rounded p-1 bg-white/50 hover:bg-gray-300/50 transition select-none"
+            onClick={toggle3D}
+          >
+            {is3D() ? '2D' : '3D'}
+          </div>
+        </div>
 
         <MapGL
           options={{
@@ -618,8 +642,8 @@ const App: Component = () => {
           <BaseMaps persistedMapsState={persistedBaseMaps} mountedMapsState={mountedBaseMaps} />
           <BaseMapColorSync isDark={mapStyle().label === 'World Dark'} />
           <GeojsonPolySources sources={allSources} />
-          <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} />
-          <GeojsonPolyLayers displayStateStore={allStore} type="center" />
+          <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} is3D={is3D} />
+          <GeojsonPolyLayers displayStateStore={allStore} type="center" is3D={is3D} />
           <ProcedurePoints procedures={displayedProcedures()} />
         </MapGL>
       </div>

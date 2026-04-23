@@ -1,7 +1,7 @@
 import { RgbaDecimal } from '~/lib/types';
 import { GeoJSONFeature } from 'mapbox-gl';
 import colorString from 'color-string';
-import { FillPaint, TraconAreaPolys } from '~/lib/types';
+import { FillExtrusionPaint, FillPaint, TraconAreaPolys } from '~/lib/types';
 
 const getGeojsonSources = (areaConfig: TraconAreaPolys) =>
   areaConfig.sectorConfigs.flatMap((sectorConfig) =>
@@ -41,10 +41,10 @@ const comparePolyAlts = (p1: mapboxgl.MapboxGeoJSONFeature, p2: mapboxgl.MapboxG
 
 const getFillColor = (paint: FillPaint | null | undefined): string => {
   if (paint === null || paint === undefined) {
-    return '#4b5563'; // Tailwind default gray-600;
+    return '#4b5563';
   }
-  let c = paint['fill-color'] as unknown as RgbaDecimal;
-  let hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
+  const c = paint['fill-color'] as unknown as RgbaDecimal;
+  const hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
   if (hex) {
     return hex;
   } else {
@@ -57,8 +57,38 @@ const isTransparentFill = (paint: FillPaint | undefined | null): boolean => {
     return true;
   }
 
-  let c = paint['fill-color'] as unknown as RgbaDecimal;
+  const c = paint['fill-color'] as unknown as RgbaDecimal;
   return c.a === 0;
 };
 
-export { getUniqueLayers, comparePolyAlts, getFillColor, isTransparentFill, getGeojsonSources };
+const getFillExtrusionColor = (paint: FillExtrusionPaint | null | undefined): string => {
+  if (paint === null || paint === undefined) {
+    return '#4b5563';
+  }
+  const c = paint['fill-extrusion-color'] as unknown as RgbaDecimal;
+  const hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
+  if (hex) {
+    return hex;
+  } else {
+    return '#4b5563';
+  }
+};
+
+const isTransparentFillExtrusion = (paint: FillExtrusionPaint | undefined | null): boolean => {
+  if (paint === null || paint === undefined) {
+    return true;
+  }
+
+  const c = paint['fill-extrusion-color'] as unknown as RgbaDecimal;
+  return c.a === 0;
+};
+
+export {
+  getUniqueLayers,
+  comparePolyAlts,
+  getFillColor,
+  isTransparentFill,
+  getFillExtrusionColor,
+  isTransparentFillExtrusion,
+  getGeojsonSources,
+};
