@@ -1,7 +1,7 @@
 import { RgbaDecimal } from '~/lib/types';
 import { GeoJSONFeature } from 'mapbox-gl';
 import colorString from 'color-string';
-import { FillExtrusionPaint, FillPaint, TraconAreaPolys } from '~/lib/types';
+import { FillPaint, TraconAreaPolys } from '~/lib/types';
 
 const getGeojsonSources = (areaConfig: TraconAreaPolys) =>
   areaConfig.sectorConfigs.flatMap((sectorConfig) =>
@@ -61,34 +61,4 @@ const isTransparentFill = (paint: FillPaint | undefined | null): boolean => {
   return c.a === 0;
 };
 
-const getFillExtrusionColor = (paint: FillExtrusionPaint | null | undefined): string => {
-  if (paint === null || paint === undefined) {
-    return '#4b5563';
-  }
-  const c = paint['fill-extrusion-color'] as unknown as RgbaDecimal;
-  const hex = colorString.to.hex(c.r * 255, c.g * 255, c.b * 255, c.a);
-  if (hex) {
-    return hex;
-  } else {
-    return '#4b5563';
-  }
-};
-
-const isTransparentFillExtrusion = (paint: FillExtrusionPaint | undefined | null): boolean => {
-  if (paint === null || paint === undefined) {
-    return true;
-  }
-
-  const c = paint['fill-extrusion-color'] as unknown as RgbaDecimal;
-  return c.a === 0;
-};
-
-export {
-  getUniqueLayers,
-  comparePolyAlts,
-  getFillColor,
-  isTransparentFill,
-  getFillExtrusionColor,
-  isTransparentFillExtrusion,
-  getGeojsonSources,
-};
+export { getUniqueLayers, comparePolyAlts, getFillColor, isTransparentFill, getGeojsonSources };

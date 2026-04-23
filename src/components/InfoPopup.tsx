@@ -1,38 +1,21 @@
-import { Accessor, Component, createMemo, For, Show } from 'solid-js';
-import { FillExtrusionPaint, FillPaint, PopupState, Settings } from '~/lib/types';
+import { Component, createMemo, For, Show } from 'solid-js';
+import { FillPaint, PopupState, Settings } from '~/lib/types';
 import { SECTOR_AREA_MAP } from '~/lib/config';
-import {
-  comparePolyAlts,
-  getFillColor,
-  getFillExtrusionColor,
-  isTransparentFill,
-  isTransparentFillExtrusion,
-} from '~/lib/geojson';
+import { comparePolyAlts, getFillColor, isTransparentFill } from '~/lib/geojson';
 import { createMousePosition } from '@solid-primitives/mouse';
 import { cn } from '~/lib/utils';
 
 interface InfoPopupProps {
   popupState: PopupState;
   settings: Settings;
-  is3D: Accessor<boolean>;
 }
 
 export const InfoPopup: Component<InfoPopupProps> = (props) => {
-  const getColor = (paint: unknown): string =>
-    props.is3D()
-      ? getFillExtrusionColor(paint as FillExtrusionPaint)
-      : getFillColor(paint as FillPaint);
-
-  const getTransparent = (paint: unknown): boolean =>
-    props.is3D()
-      ? isTransparentFillExtrusion(paint as FillExtrusionPaint)
-      : isTransparentFill(paint as FillPaint);
-
   const sortedPolys = createMemo(() =>
     props.popupState.hoveredPolys.toSorted(comparePolyAlts).map((p) => ({
       poly: p,
-      isTransparent: getTransparent(p.layer?.paint),
-      color: getColor(p.layer?.paint),
+      isTransparent: isTransparentFill(p.layer?.paint as FillPaint),
+      color: getFillColor(p.layer?.paint as FillPaint),
     })),
   );
   const pos = createMousePosition(window);
@@ -64,7 +47,7 @@ export const InfoPopup: Component<InfoPopupProps> = (props) => {
                     style={{
                       color: polyInfo.isTransparent
                         ? '#4b5563'
-                        : polyInfo.color,
+                        : getFillColor(polyInfo.poly.layer?.paint as FillPaint),
                     }}
                   >
                     {polyInfo.poly.source

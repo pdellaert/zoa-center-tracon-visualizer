@@ -9,7 +9,6 @@ import {
   CenterAirspaceDisplayState,
   AppDisplayState,
   CenterAreaDefinition,
-  FillExtrusionPaint,
   FillPaint,
   MountedBaseMapState,
   PersistedBaseMapState,
@@ -37,7 +36,7 @@ import { GeojsonPolyLayers } from '~/components/GeojsonPolyLayers';
 import { SectorDisplayWithControls } from '~/components/SectorDisplayWithControls';
 import { SettingsDialog } from '~/components/SettingsDialog';
 import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
-import { getUniqueLayers, isTransparentFill, isTransparentFillExtrusion, getGeojsonSources } from '~/lib/geojson';
+import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson';
 import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
 import { ProceduresDialog } from '~/components/ProceduresDialog';
@@ -184,22 +183,22 @@ const App: Component = () => {
   };
 
   const altitudeHover = (evt: MapMouseEvent) => {
+    if (is3D()) {
+      setPopup('vis', false);
+      return;
+    }
     if (!evt.target.isStyleLoaded()) return;
     const features: GeoJSONFeature[] = evt.target.queryRenderedFeatures(evt.point, {
       filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['has', 'minAlt'], ['has', 'maxAlt']],
     });
-    const layerType = is3D() ? 'fill-extrusion' : 'fill';
-    const fillLayers = getUniqueLayers(features.filter((f) => f.layer?.type == layerType));
+    const fillLayers = getUniqueLayers(features.filter((f) => f.layer?.type == 'fill'));
     if (fillLayers.length > 0) {
       logIfDev(fillLayers);
       let transparentLayers: GeoJSONFeature[] = [];
       let visibleLayers: GeoJSONFeature[] = [];
-      fillLayers.forEach((l) => {
-        const transparent = is3D()
-          ? isTransparentFillExtrusion(l.layer?.paint as FillExtrusionPaint)
-          : isTransparentFill(l.layer?.paint as FillPaint);
-        transparent ? transparentLayers.push(l) : visibleLayers.push(l);
-      });
+      fillLayers.forEach((l) =>
+        isTransparentFill(l.layer?.paint as FillPaint) ? transparentLayers.push(l) : visibleLayers.push(l),
+      );
       if (settings.popup.showUncheckedSectors) {
         setPopup(
           produce((state) => {
@@ -601,7 +600,7 @@ const App: Component = () => {
         <Footer />
       </div>
       <div class="grow relative">
-        <InfoPopup popupState={popup} settings={settings} is3D={is3D} />
+        <InfoPopup popupState={popup} settings={settings} />
 
         <div class="absolute top-5 left-5 z-50 flex space-x-2">
           <SettingsDialog settings={settings} setSettings={setSettings} />
