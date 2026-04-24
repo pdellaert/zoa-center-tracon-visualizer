@@ -2,7 +2,7 @@ import { Viewport } from 'solid-map-gl';
 import { MapStyle, Settings } from '~/lib/types';
 
 /** Multiplier to convert minAlt/maxAlt (100s of feet) to meters, with a visual amplification factor. */
-export const ALTITUDE_SCALE = 100 * 0.3048 * 5.0; // 100 feet in meters, times 5 for visual amplification
+export const ALTITUDE_SCALE = 100 * 0.3048 * 3.0; // ≈ 91.44
 /** Cap for maxAlt: 999 (unlimited) → FL600. */
 export const MAX_ALT_VALUE = 600;
 
