@@ -21,12 +21,24 @@ const KIND_LINE_COLOR: Record<ProcedureKind, string> = {
 const LINE_WIDTH = 3;
 const CASING_WIDTH = LINE_WIDTH + 2;
 const DASH_PATTERN: [number, number] = [4, 3];
+const ANCHOR_LAYER_ID = 'procedure-zorder-anchor';
+const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] };
 
 export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
   const fixFeatures = createMemo(() => aggregateFixFeatures(props.procedures));
 
   return (
     <>
+      {/* Always-mounted invisible anchor: stable z-position marker so procedure
+          line layers can reliably insert below the fix text/points (which mount
+          conditionally and would otherwise race with new procedures' layers). */}
+      <Source id="procedure-zorder-anchor-source" source={{ type: 'geojson', data: EMPTY_FC }}>
+        <Layer
+          id={ANCHOR_LAYER_ID}
+          style={{ type: 'symbol', layout: { visibility: 'none' } }}
+        />
+      </Source>
+
       <For each={props.procedures}>
         {(procedure) => {
           const geometry = createMemo(() => buildProcedureGeometry(procedure));
@@ -56,6 +68,7 @@ export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
                         {/* Solid casing */}
                         <Layer
                           id={`${kind}-line-casing-${id}`}
+                          beforeId={ANCHOR_LAYER_ID}
                           style={{
                             type: 'line',
                             filter: ['==', ['get', 'dashed'], false],
@@ -68,6 +81,7 @@ export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
                         {/* Dashed casing */}
                         <Layer
                           id={`${kind}-line-casing-dash-${id}`}
+                          beforeId={ANCHOR_LAYER_ID}
                           style={{
                             type: 'line',
                             filter: ['==', ['get', 'dashed'], true],
@@ -81,6 +95,7 @@ export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
                         {/* Solid line */}
                         <Layer
                           id={`${kind}-line-${id}`}
+                          beforeId={ANCHOR_LAYER_ID}
                           style={{
                             type: 'line',
                             filter: ['==', ['get', 'dashed'], false],
@@ -93,6 +108,7 @@ export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
                         {/* Dashed line */}
                         <Layer
                           id={`${kind}-line-dash-${id}`}
+                          beforeId={ANCHOR_LAYER_ID}
                           style={{
                             type: 'line',
                             filter: ['==', ['get', 'dashed'], true],
@@ -116,6 +132,7 @@ export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
                       >
                         <Layer
                           id={`${kind}-arrow-casing-${id}`}
+                          beforeId={ANCHOR_LAYER_ID}
                           style={{
                             type: 'line',
                             layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -127,6 +144,7 @@ export const ProcedurePoints: Component<ProcedurePointsProps> = (props) => {
                         />
                         <Layer
                           id={`${kind}-arrow-${id}`}
+                          beforeId={ANCHOR_LAYER_ID}
                           style={{
                             type: 'line',
                             layout: { 'line-cap': 'round', 'line-join': 'round' },
