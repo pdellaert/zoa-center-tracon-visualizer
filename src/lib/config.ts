@@ -132,6 +132,9 @@ const NAVDATA_PATH_BY_KIND: Record<ProcedureKind, string> = {
 export const navdataUrl = (kind: ProcedureKind, airport: string) =>
   `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/${NAVDATA_PATH_BY_KIND[kind]}/${airport}`;
 
+export const navdataAirportUrl = (airport: string) =>
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airports/${airport}`;
+
 export const MAP_STYLES: MapStyle[] = [
   DEFAULT_MAP_STYLE,
   {

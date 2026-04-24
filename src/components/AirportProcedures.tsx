@@ -1,6 +1,7 @@
 import { Component, createSignal, For, Show } from 'solid-js';
 import { Checkbox } from '~/components/ui-core/Checkbox';
 import {
+  AirportInfo,
   AirportSection,
   Procedure,
   ProcedureDisplayState,
@@ -8,7 +9,7 @@ import {
   ProcedureSubsection,
 } from '~/lib/types';
 import { createStore, produce } from 'solid-js/store';
-import { navdataUrl } from '~/lib/config';
+import { navdataAirportUrl, navdataUrl } from '~/lib/config';
 
 interface AirportProceduresProps {
   onProcedureToggle: (procedure: Procedure, isDisplayed: boolean) => void;
@@ -46,6 +47,17 @@ const fetchProcedures = async (kind: ProcedureKind, airport: string): Promise<Pr
     identifier: identifierFor(kind, r) ?? '',
     sequences: r.sequences,
   }));
+};
+
+const fetchAirportInfo = async (airport: string): Promise<AirportInfo | null> => {
+  const response = await fetch(navdataAirportUrl(airport));
+  if (!response.ok) return null;
+  const raw = await response.json();
+  return {
+    identifier: typeof raw.identifier === 'string' ? raw.identifier : airport,
+    variation: typeof raw.variation === 'number' ? raw.variation : null,
+    courseType: typeof raw.courseType === 'string' ? raw.courseType : null,
+  };
 };
 
 const buildSubsection = (procedures: Procedure[]): ProcedureSubsection => ({
@@ -187,10 +199,11 @@ export const AirportProcedures: Component<AirportProceduresProps> = (props) => {
     setIsLoading(true);
 
     try {
-      const [sidResult, starResult, appResult] = await Promise.allSettled([
+      const [sidResult, starResult, appResult, airportResult] = await Promise.allSettled([
         fetchProcedures('sid', airport),
         fetchProcedures('star', airport),
         fetchProcedures('app', airport),
+        fetchAirportInfo(airport),
       ]);
 
       const sids = sidResult.status === 'fulfilled' ? sidResult.value : [];
@@ -206,6 +219,15 @@ export const AirportProcedures: Component<AirportProceduresProps> = (props) => {
       }
 
       annotateSidRunwayOrigins(sids, runwayCoordsFromApproaches(apps));
+
+      const info = airportResult.status === 'fulfilled' ? airportResult.value : null;
+      const magneticCorrection =
+        info && info.courseType === 'Magnetic' && info.variation !== null
+          ? info.variation
+          : undefined;
+      if (magneticCorrection !== undefined) {
+        for (const p of [...sids, ...stars, ...apps]) p.magneticCorrection = magneticCorrection;
+      }
 
       setAirportSections(
         produce((sections) => {

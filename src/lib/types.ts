@@ -217,11 +217,20 @@ export type FixDescription =
   | 'MissedApproach'
   | 'MissedApproachFirstLeg';
 
+export interface AirportInfo {
+  identifier: string;
+  variation: number | null;
+  courseType: string | null;
+}
+
 export interface Procedure {
   kind: ProcedureKind;
   airport: string;
   identifier: string;
   sequences: Sequence[];
+  // Degrees to add to a magnetic bearing to get a true bearing.
+  // Undefined when airport metadata is unavailable or courseType != "Magnetic".
+  magneticCorrection?: number;
 }
 
 export interface Sequence {

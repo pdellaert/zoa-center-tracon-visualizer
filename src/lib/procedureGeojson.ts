@@ -98,6 +98,13 @@ const interpolateBearing = (from: number, to: number, t: number): number => {
   return (from + diff * t + 360) % 360;
 };
 
+// Magnetic→true conversion. The geometry layer (destinationPoint, bearingBetween)
+// works against geographic north, so any magnetic-domain input (point.course
+// from the API, runway-designator-derived headings) must be converted before
+// being plotted. variation > 0 = easterly.
+const toTrue = (magneticDeg: number, correction: number): number =>
+  (magneticDeg + correction + 360) % 360;
+
 /**
  * Generate arc points that smoothly transition from rwyHeading to courseHeading
  * over ARC_DISTANCE_NM, starting at the given position. Returns the arc coords
@@ -158,7 +165,11 @@ const flushSegment = (
   if (coords.length >= 2) segments.push({ coords: [...coords], dashed });
 };
 
-export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): SequenceGeometry => {
+export const buildSequenceGeometry = (
+  sequence: Sequence,
+  kind: ProcedureKind,
+  magneticCorrection: number = 0,
+): SequenceGeometry => {
   const lineSegments: LineSegment[] = [];
   const fixFeatures: FixFeature[] = [];
   const arrowFeatures: ArrowFeature[] = [];
@@ -194,13 +205,21 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
 
     if (ARROW_LEGTYPES.includes(point.legType)) {
       if (previous) {
-        const rwyHdg = isAtRunwayOrigin ? runwayHeading(sequence.transition) : null;
+        const rwyHdgMag = isAtRunwayOrigin ? runwayHeading(sequence.transition) : null;
+        // Threshold comparison stays in magnetic — both operands are magnetic,
+        // and a constant offset cancels in angleDifference.
         const needsArc =
-          rwyHdg !== null && angleDifference(rwyHdg, point.course) > ARC_THRESHOLD_DEG;
+          rwyHdgMag !== null && angleDifference(rwyHdgMag, point.course) > ARC_THRESHOLD_DEG;
+
+        const courseTrue = toTrue(point.course, magneticCorrection);
 
         let straightStart: { latitude: number; longitude: number };
         if (needsArc) {
-          const arc = generateArcPoints(previous, rwyHdg!, point.course);
+          const arc = generateArcPoints(
+            previous,
+            toTrue(rwyHdgMag!, magneticCorrection),
+            courseTrue,
+          );
           currentCoords.push(...arc.coords);
           straightStart = arc.end;
         } else {
@@ -213,14 +232,14 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
         const tip = destinationPoint(
           straightStart.latitude,
           straightStart.longitude,
-          point.course,
+          courseTrue,
           straightDist,
         );
         currentCoords.push([tip.longitude, tip.latitude]);
         flushSegment(lineSegments, currentCoords, false);
         currentCoords = [];
 
-        const backBearing = (point.course + 180) % 360;
+        const backBearing = (courseTrue + 180) % 360;
         const leftWing = destinationPoint(
           tip.latitude,
           tip.longitude,
@@ -264,15 +283,18 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
     } else {
       // Arc from runway if the angle to this fix is steep
       if (isAtRunwayOrigin && previous) {
-        const rwyHdg = runwayHeading(sequence.transition);
-        if (rwyHdg !== null) {
+        const rwyHdgMag = runwayHeading(sequence.transition);
+        if (rwyHdgMag !== null) {
+          // bearingBetween returns true; convert rwyHdg to true so both
+          // operands live in the same domain.
+          const rwyHdgTrue = toTrue(rwyHdgMag, magneticCorrection);
           const bearing = bearingBetween(
             previous.latitude,
             previous.longitude,
             point.latitude,
             point.longitude,
           );
-          if (angleDifference(rwyHdg, bearing) > ARC_THRESHOLD_DEG) {
+          if (angleDifference(rwyHdgTrue, bearing) > ARC_THRESHOLD_DEG) {
             const dist = distanceBetween(
               previous.latitude,
               previous.longitude,
@@ -280,7 +302,7 @@ export const buildSequenceGeometry = (sequence: Sequence, kind: ProcedureKind): 
               point.longitude,
             );
             const arcDist = Math.min(dist / 2, ARC_DISTANCE_NM);
-            const arc = generateArcPoints(previous, rwyHdg, bearing, arcDist);
+            const arc = generateArcPoints(previous, rwyHdgTrue, bearing, arcDist);
             currentCoords.push(...arc.coords);
           }
         }
@@ -326,9 +348,10 @@ const pickBetterFix = (a: FixFeature, b: FixFeature): FixFeature =>
 export const buildProcedureGeometry = (procedure: Procedure): ProcedureGeometry => {
   const sequencesGeom: ProcedureSequenceGeometry[] = [];
   const bestByIdentifier = new Map<string, FixFeature>();
+  const correction = procedure.magneticCorrection ?? 0;
 
   for (const sequence of procedure.sequences) {
-    const geom = buildSequenceGeometry(sequence, procedure.kind);
+    const geom = buildSequenceGeometry(sequence, procedure.kind, correction);
     sequencesGeom.push({
       sequence,
       lineSegments: geom.lineSegments,
@@ -359,8 +382,9 @@ export const procedureLayerId = (procedure: Procedure): string =>
 export const aggregateFixFeatures = (procedures: Procedure[]): FixFeature[] => {
   const bestByIdentifier = new Map<string, FixFeature>();
   for (const procedure of procedures) {
+    const correction = procedure.magneticCorrection ?? 0;
     for (const sequence of procedure.sequences) {
-      const geom = buildSequenceGeometry(sequence, procedure.kind);
+      const geom = buildSequenceGeometry(sequence, procedure.kind, correction);
       for (const feat of geom.fixFeatures) {
         const id = feat.properties.identifier;
         if (!id) continue;
