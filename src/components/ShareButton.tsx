@@ -58,13 +58,13 @@ export const ShareButton: Component<ShareButtonProps> = (props) => {
   return (
     <button
       onClick={handleCopy}
-      class="font-bold text-sm border rounded border-slate-400 p-1 bg-slate-400/50 hover:bg-slate-400/60 transition text-gray-700 hover:cursor-pointer flex items-center gap-1"
-      classList={{ 'border-red-400 bg-red-400/50': error() }}
+      class="flex items-center gap-1 h-8 px-3 text-sm font-medium rounded bg-slate-700 hover:bg-slate-600 text-white transition-colors cursor-pointer"
+      classList={{ 'bg-red-600 hover:bg-red-500': error() }}
       title="Copy shareable URL with current sector states and configs"
     >
       <Show when={error()}>
-        <X class="w-4 h-4 text-red-700" />
-        <span class="text-red-700">Failed!</span>
+        <X class="w-4 h-4" />
+        <span>Failed!</span>
       </Show>
       <Show when={!error() && copied()}>
         <Check class="w-4 h-4" />

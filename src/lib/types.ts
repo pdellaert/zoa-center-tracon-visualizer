@@ -221,6 +221,8 @@ export interface AirportInfo {
   identifier: string;
   variation: number | null;
   courseType: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface Procedure {
@@ -272,4 +274,38 @@ export interface AirportSection {
     stars: ProcedureSubsection;
     apps: ProcedureSubsection;
   };
+}
+
+///////////////////////////////////////////////////
+// Airway & Point lookup interfaces (route feature)
+///////////////////////////////////////////////////
+export interface AirwayPoint {
+  identifier: string;
+  latitude: number;
+  longitude: number;
+  type?: string | null;
+  level?: string | null;
+  restriction?: string | null;
+  outboundCourse?: number | null;
+  inboundCourse?: number | null;
+  distanceFrom?: number | null;
+  minimum?: string | null;
+  minimum2?: string | null;
+  maximum?: string | null;
+  descriptions?: string[] | null;
+}
+
+export interface Airway {
+  airwayIdentifier: string;
+  points: AirwayPoint[];
+}
+
+export interface PointLookupResult {
+  identifier: string;
+  name: string | null;
+  latitude: number;
+  longitude: number;
+  type: string | null;
+  subtype: string | null;
+  airportIdentifier: string | null;
 }

@@ -1,7 +1,6 @@
 import { Component, createSignal, For, Show } from 'solid-js';
 import { Checkbox } from '~/components/ui-core/Checkbox';
 import {
-  AirportInfo,
   AirportSection,
   Procedure,
   ProcedureDisplayState,
@@ -9,17 +8,10 @@ import {
   ProcedureSubsection,
 } from '~/lib/types';
 import { createStore, produce } from 'solid-js/store';
-import { navdataAirportUrl, navdataUrl } from '~/lib/config';
+import { loadAirportProcedures } from '~/lib/procedureApi';
 
 interface AirportProceduresProps {
   onProcedureToggle: (procedure: Procedure, isDisplayed: boolean) => void;
-}
-
-interface RawProcedureResponse {
-  departureIdentifier?: string;
-  arrivalIdentifier?: string;
-  approachIdentifier?: string;
-  sequences: Procedure['sequences'];
 }
 
 const SUBSECTION_ORDER: { key: 'sids' | 'stars' | 'apps'; kind: ProcedureKind; label: string; empty: string }[] = [
@@ -28,152 +20,10 @@ const SUBSECTION_ORDER: { key: 'sids' | 'stars' | 'apps'; kind: ProcedureKind; l
   { key: 'apps', kind: 'app', label: 'APPs', empty: 'No approaches published.' },
 ];
 
-const identifierFor = (kind: ProcedureKind, raw: RawProcedureResponse): string | undefined => {
-  if (kind === 'sid') return raw.departureIdentifier;
-  if (kind === 'star') return raw.arrivalIdentifier;
-  return raw.approachIdentifier;
-};
-
-const fetchProcedures = async (kind: ProcedureKind, airport: string): Promise<Procedure[]> => {
-  const response = await fetch(navdataUrl(kind, airport));
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    throw new Error(`Failed to fetch ${kind} procedures for ${airport}`);
-  }
-  const raw: RawProcedureResponse[] = await response.json();
-  return raw.map((r) => ({
-    kind,
-    airport,
-    identifier: identifierFor(kind, r) ?? '',
-    sequences: r.sequences,
-  }));
-};
-
-const fetchAirportInfo = async (airport: string): Promise<AirportInfo | null> => {
-  const response = await fetch(navdataAirportUrl(airport));
-  if (!response.ok) return null;
-  const raw = await response.json();
-  return {
-    identifier: typeof raw.identifier === 'string' ? raw.identifier : airport,
-    variation: typeof raw.variation === 'number' ? raw.variation : null,
-    courseType: typeof raw.courseType === 'string' ? raw.courseType : null,
-  };
-};
-
 const buildSubsection = (procedures: Procedure[]): ProcedureSubsection => ({
   isExpanded: false,
   items: procedures.map((p) => ({ id: p.identifier, isDisplayed: false, procedure: p })),
 });
-
-/**
- * Approaches expose runway threshold coords as points tagged RunwayHelipad.
- * Extract them into a map keyed by identifier (e.g., "RW10L") so SID sequences
- * can anchor their line at the departure runway without a separate API lookup.
- */
-const runwayCoordsFromApproaches = (
-  approaches: Procedure[],
-): Map<string, { latitude: number; longitude: number }> => {
-  const map = new Map<string, { latitude: number; longitude: number }>();
-  for (const procedure of approaches) {
-    for (const sequence of procedure.sequences) {
-      for (const point of sequence.points) {
-        if (
-          point.identifier &&
-          point.latitude != null &&
-          point.longitude != null &&
-          point.descriptions.includes('RunwayHelipad') &&
-          !map.has(point.identifier)
-        ) {
-          map.set(point.identifier, { latitude: point.latitude, longitude: point.longitude });
-        }
-      }
-    }
-  }
-  return map;
-};
-
-/**
- * Flip a parallel-runway suffix. L/R and A/B both appear in the wild for the
- * same physical pair (SIDs occasionally publish A/B where approaches use L/R).
- * We treat A≡L and B≡R, and flip A↔B just like L↔R. C stays.
- */
-const flipRunwaySuffix = (suffix: string): string => {
-  switch (suffix) {
-    case 'L':
-      return 'R';
-    case 'R':
-      return 'L';
-    case 'A':
-      return 'B';
-    case 'B':
-      return 'A';
-    default:
-      return suffix;
-  }
-};
-
-/**
- * All equivalent spellings of a runway identifier. A↔L and B↔R are treated as
- * the same physical runway when looking up coords, since the API mixes these.
- */
-const runwayVariants = (runway: string): string[] => {
-  const m = runway.match(/^RW(\d{1,2})([A-Z]?)$/);
-  if (!m) return [runway];
-  const [, num, suffix] = m;
-  const variants = [runway];
-  if (suffix === 'A') variants.push(`RW${num}L`, `RW${num}R`);
-  else if (suffix === 'B') variants.push(`RW${num}R`, `RW${num}L`);
-  else if (suffix === 'L') variants.push(`RW${num}A`);
-  else if (suffix === 'R') variants.push(`RW${num}B`);
-  return variants;
-};
-
-/**
- * Flip a runway identifier to its opposite end.
- * RW10L ↔ RW28R, RW18 ↔ RW36, RW13C ↔ RW31C, RW28A ↔ RW10B.
- */
-const oppositeRunway = (runway: string): string | null => {
-  const m = runway.match(/^RW(\d{1,2})([A-Z]?)$/);
-  if (!m) return null;
-  const num = parseInt(m[1], 10);
-  if (num < 1 || num > 36) return null;
-  const opposite = ((num - 1 + 18) % 36) + 1;
-  const suffix = flipRunwaySuffix(m[2]);
-  return `RW${String(opposite).padStart(2, '0')}${suffix}`;
-};
-
-const lookupRunway = (
-  map: Map<string, { latitude: number; longitude: number }>,
-  runway: string,
-): { latitude: number; longitude: number } | undefined => {
-  for (const variant of runwayVariants(runway)) {
-    const coords = map.get(variant);
-    if (coords) return coords;
-  }
-  return undefined;
-};
-
-/**
- * For each SID sequence with a runway transition, anchor the line at the
- * *departure* end of the runway — which is the arrival threshold of the
- * opposite runway identifier (the aircraft only leaves the ground there).
- * Falls back to the same-name threshold if the opposite isn't published.
- */
-const annotateSidRunwayOrigins = (
-  sids: Procedure[],
-  runwayCoords: Map<string, { latitude: number; longitude: number }>,
-): void => {
-  for (const sid of sids) {
-    for (const sequence of sid.sequences) {
-      if (!sequence.transition) continue;
-      const opposite = oppositeRunway(sequence.transition);
-      const coords =
-        (opposite ? lookupRunway(runwayCoords, opposite) : undefined) ??
-        lookupRunway(runwayCoords, sequence.transition);
-      if (coords) sequence.runwayOrigin = coords;
-    }
-  }
-};
 
 export const AirportProcedures: Component<AirportProceduresProps> = (props) => {
   const [airportInput, setAirportInput] = createSignal('');
@@ -199,35 +49,7 @@ export const AirportProcedures: Component<AirportProceduresProps> = (props) => {
     setIsLoading(true);
 
     try {
-      const [sidResult, starResult, appResult, airportResult] = await Promise.allSettled([
-        fetchProcedures('sid', airport),
-        fetchProcedures('star', airport),
-        fetchProcedures('app', airport),
-        fetchAirportInfo(airport),
-      ]);
-
-      const sids = sidResult.status === 'fulfilled' ? sidResult.value : [];
-      const stars = starResult.status === 'fulfilled' ? starResult.value : [];
-      const apps = appResult.status === 'fulfilled' ? appResult.value : [];
-
-      const allFailed =
-        sidResult.status === 'rejected' &&
-        starResult.status === 'rejected' &&
-        appResult.status === 'rejected';
-      if (allFailed) {
-        throw new Error(`No procedures found for ${airport}`);
-      }
-
-      annotateSidRunwayOrigins(sids, runwayCoordsFromApproaches(apps));
-
-      const info = airportResult.status === 'fulfilled' ? airportResult.value : null;
-      const magneticCorrection =
-        info && info.courseType === 'Magnetic' && info.variation !== null
-          ? info.variation
-          : undefined;
-      if (magneticCorrection !== undefined) {
-        for (const p of [...sids, ...stars, ...apps]) p.magneticCorrection = magneticCorrection;
-      }
+      const { sids, stars, apps } = await loadAirportProcedures(airport);
 
       setAirportSections(
         produce((sections) => {
