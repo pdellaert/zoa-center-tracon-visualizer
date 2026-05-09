@@ -1,4 +1,4 @@
-import { navdataAirportUrl, navdataUrl } from '~/lib/config';
+import { isValidNavdataIdentifier, navdataAirportUrl, navdataUrl } from '~/lib/config';
 import { AirportInfo, Procedure, ProcedureKind } from '~/lib/types';
 
 // Per-airport pack of all three procedure kinds, with annotations applied
@@ -31,6 +31,7 @@ const identifierFor = (kind: ProcedureKind, raw: RawProcedureResponse): string |
 };
 
 export const fetchProcedures = async (kind: ProcedureKind, airport: string): Promise<Procedure[]> => {
+  if (!isValidNavdataIdentifier(airport)) return [];
   const response = await fetch(navdataUrl(kind, airport));
   if (!response.ok) {
     if (response.status === 404) return [];
@@ -46,6 +47,7 @@ export const fetchProcedures = async (kind: ProcedureKind, airport: string): Pro
 };
 
 export const fetchAirportInfo = async (airport: string): Promise<AirportInfo | null> => {
+  if (!isValidNavdataIdentifier(airport)) return null;
   const response = await fetch(navdataAirportUrl(airport));
   if (!response.ok) return null;
   const raw = await response.json();

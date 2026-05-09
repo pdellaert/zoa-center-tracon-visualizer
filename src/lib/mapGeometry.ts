@@ -8,6 +8,9 @@ import { LegType } from '~/lib/types';
 export const EARTH_RADIUS_NM = 3440.065;
 
 export const MANUAL_ARROW_DISTANCE_NM = 5;
+export const ARC_THRESHOLD_DEG = 60;
+export const ARC_DISTANCE_NM = MANUAL_ARROW_DISTANCE_NM / 2;
+export const ARC_STEPS = 12;
 
 export const ARROW_LEGTYPES: LegType[] = [
   'HeadingToManual',
@@ -32,6 +35,16 @@ export const isValidCoord = (
   Number.isFinite(lat) &&
   Number.isFinite(lon) &&
   !(lat === 0 && lon === 0);
+
+// Companion to isValidCoord: returns the narrowed numeric pair when valid,
+// null otherwise. Use at sites that need to extract lat/lon without the
+// `as number` cast TS demands after a multi-arg boolean predicate.
+export const coordPair = (
+  p: { latitude: number | null | undefined; longitude: number | null | undefined },
+): { lat: number; lon: number } | null => {
+  if (!isValidCoord(p.latitude, p.longitude)) return null;
+  return { lat: p.latitude as number, lon: p.longitude as number };
+};
 
 ///////////////////////////////////////////////////
 // Spherical math
@@ -90,6 +103,98 @@ export const angleDifference = (a: number, b: number): number =>
 export const interpolateBearing = (from: number, to: number, t: number): number => {
   const diff = ((to - from + 540) % 360) - 180;
   return (from + diff * t + 360) % 360;
+};
+
+///////////////////////////////////////////////////
+// Runway / manual-termination geometry
+///////////////////////////////////////////////////
+
+// Parse a SID/STAR runway-transition designator (e.g. "RW28R") into a
+// magnetic heading in degrees. Returns null for non-runway transitions.
+export const runwayHeading = (transition?: string | null): number | null => {
+  if (!transition) return null;
+  const m = transition.match(/^RW(\d{1,2})/);
+  if (!m) return null;
+  return (parseInt(m[1], 10) * 10) % 360;
+};
+
+/**
+ * Generate arc points that smoothly transition from rwyHeading to courseHeading
+ * over arcDist NM, starting at the given position. Returns the arc coords
+ * (excluding the start) and the final position. Both heading inputs must be
+ * in the same domain (both true OR both magnetic — caller's choice).
+ */
+export const generateArcPoints = (
+  start: { latitude: number; longitude: number },
+  rwyHeading: number,
+  courseHeading: number,
+  arcDist: number = ARC_DISTANCE_NM,
+): { coords: [number, number][]; end: { latitude: number; longitude: number } } => {
+  const stepDist = arcDist / ARC_STEPS;
+  const coords: [number, number][] = [];
+  let pos = start;
+  for (let i = 1; i <= ARC_STEPS; i++) {
+    const t = i / ARC_STEPS;
+    const bearing = interpolateBearing(rwyHeading, courseHeading, t);
+    pos = destinationPoint(pos.latitude, pos.longitude, bearing, stepDist);
+    coords.push([pos.longitude, pos.latitude]);
+  }
+  return { coords, end: pos };
+};
+
+export interface ManualLegTip {
+  prev: { latitude: number; longitude: number };
+  tip: { latitude: number; longitude: number };
+  // Arc coords (excluding the start) when the leg comes off a steep runway
+  // course and needs smoothing; null otherwise. The renderer splices these
+  // into the line; the route resolver only needs `tip`.
+  arc: { coords: [number, number][]; end: { latitude: number; longitude: number } } | null;
+  courseTrue: number;
+}
+
+/**
+ * Compute the rendered arrow tip for a manual-termination (vector) leg. Used
+ * by both the procedure renderer (to draw the arrow + arc) and the route
+ * resolver (to find where the en-route line attaches). Single source of
+ * truth so the two never diverge.
+ *
+ *   - prev: coord the leg starts from. When the leg is the FIRST leg off a
+ *     runway origin, pass the runway threshold here AND pass the sequence's
+ *     transition (e.g. "RW28R") as runwayTransition; arc smoothing kicks in
+ *     when the angle from runway heading to course exceeds ARC_THRESHOLD_DEG.
+ *   - courseMag: the manual leg's published magnetic course.
+ *   - magneticCorrection: variation to apply via toTrue.
+ *   - runwayTransition: see above; pass null for non-first legs.
+ */
+export const manualLegTip = (
+  prev: { latitude: number; longitude: number },
+  courseMag: number,
+  magneticCorrection: number,
+  runwayTransition: string | null,
+): ManualLegTip => {
+  const courseTrue = toTrue(courseMag, magneticCorrection);
+  const rwyHdgMag = runwayTransition ? runwayHeading(runwayTransition) : null;
+  // Threshold comparison stays in magnetic — both operands magnetic, so the
+  // constant correction cancels in angleDifference.
+  const needsArc =
+    rwyHdgMag !== null && angleDifference(rwyHdgMag, courseMag) > ARC_THRESHOLD_DEG;
+
+  let arc: ManualLegTip['arc'] = null;
+  let straightStart = prev;
+  if (needsArc) {
+    arc = generateArcPoints(prev, toTrue(rwyHdgMag!, magneticCorrection), courseTrue);
+    straightStart = arc.end;
+  }
+  const straightDist = needsArc
+    ? MANUAL_ARROW_DISTANCE_NM - ARC_DISTANCE_NM
+    : MANUAL_ARROW_DISTANCE_NM;
+  const tip = destinationPoint(
+    straightStart.latitude,
+    straightStart.longitude,
+    courseTrue,
+    straightDist,
+  );
+  return { prev, tip, arc, courseTrue };
 };
 
 /**

@@ -130,16 +130,23 @@ const NAVDATA_PATH_BY_KIND: Record<ProcedureKind, string> = {
 };
 
 export const navdataUrl = (kind: ProcedureKind, airport: string) =>
-  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/${NAVDATA_PATH_BY_KIND[kind]}/${airport}`;
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/${NAVDATA_PATH_BY_KIND[kind]}/${encodeURIComponent(airport)}`;
 
 export const navdataAirportUrl = (airport: string) =>
-  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airports/${airport}`;
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airports/${encodeURIComponent(airport)}`;
 
 export const navdataAirwayUrl = (identifier: string) =>
-  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airways/${identifier}`;
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airways/${encodeURIComponent(identifier)}`;
 
 export const navdataPointUrl = (identifier: string) =>
-  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/points/${identifier}`;
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/points/${encodeURIComponent(identifier)}`;
+
+// Permissive enough for ICAO airports, navaid fixes (3-5 chars), airway codes
+// (e.g. J88, B453), and 5-character RNAV waypoints. Rejects anything with
+// non-alphanumeric chars or path separators so bogus tokens never reach the
+// network and don't pollute the per-id caches.
+const NAVDATA_ID_RE = /^[A-Z0-9]{2,10}$/;
+export const isValidNavdataIdentifier = (s: string): boolean => NAVDATA_ID_RE.test(s);
 
 export const MAP_STYLES: MapStyle[] = [
   DEFAULT_MAP_STYLE,

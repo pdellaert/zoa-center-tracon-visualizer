@@ -1,16 +1,19 @@
 import { FixDescription, LegType, Point, Procedure, ProcedureKind, Sequence } from '~/lib/types';
 import {
   angleDifference,
+  ARC_DISTANCE_NM,
+  ARC_THRESHOLD_DEG,
   ArrowFeature,
   ARROW_LEGTYPES,
   bearingBetween,
   destinationPoint,
   distanceBetween,
   FixFeature,
-  interpolateBearing,
+  generateArcPoints,
   isValidCoord,
   LineSegment,
-  MANUAL_ARROW_DISTANCE_NM,
+  manualLegTip,
+  runwayHeading,
   SequenceGeometry,
   toTrue,
 } from '~/lib/mapGeometry';
@@ -20,9 +23,6 @@ const MISSED_APPROACH_STOPPERS: FixDescription[] = ['MissedApproach', 'MissedApp
 
 const ARROW_WING_LENGTH_NM = 0.6;
 const ARROW_WING_ANGLE_DEG = 30;
-const ARC_THRESHOLD_DEG = 60;
-const ARC_DISTANCE_NM = MANUAL_ARROW_DISTANCE_NM / 2;
-const ARC_STEPS = 12;
 
 export const makeAltitudesString = (minAlt?: string | null, maxAlt?: string | null) => {
   if (minAlt && maxAlt) {
@@ -54,36 +54,6 @@ const isMissedApproachBoundary = (point: Point): boolean =>
   point.descriptions.some((d) => MISSED_APPROACH_STOPPERS.includes(d));
 
 const isRunwayThreshold = (point: Point): boolean => point.descriptions.includes('RunwayHelipad');
-
-const runwayHeading = (transition?: string): number | null => {
-  if (!transition) return null;
-  const m = transition.match(/^RW(\d{1,2})/);
-  if (!m) return null;
-  return (parseInt(m[1], 10) * 10) % 360;
-};
-
-/**
- * Generate arc points that smoothly transition from rwyHeading to courseHeading
- * over ARC_DISTANCE_NM, starting at the given position. Returns the arc coords
- * (excluding the start, which is already in lineCoords) and the final position.
- */
-const generateArcPoints = (
-  start: { latitude: number; longitude: number },
-  rwyHeading: number,
-  courseHeading: number,
-  arcDist: number = ARC_DISTANCE_NM,
-): { coords: [number, number][]; end: { latitude: number; longitude: number } } => {
-  const stepDist = arcDist / ARC_STEPS;
-  const coords: [number, number][] = [];
-  let pos = start;
-  for (let i = 1; i <= ARC_STEPS; i++) {
-    const t = i / ARC_STEPS;
-    const bearing = interpolateBearing(rwyHeading, courseHeading, t);
-    pos = destinationPoint(pos.latitude, pos.longitude, bearing, stepDist);
-    coords.push([pos.longitude, pos.latitude]);
-  }
-  return { coords, end: pos };
-};
 
 const flushSegment = (
   segments: LineSegment[],
@@ -133,36 +103,13 @@ export const buildSequenceGeometry = (
 
     if (ARROW_LEGTYPES.includes(point.legType)) {
       if (previous) {
-        const rwyHdgMag = isAtRunwayOrigin ? runwayHeading(sequence.transition) : null;
-        // Threshold comparison stays in magnetic — both operands are magnetic,
-        // and a constant offset cancels in angleDifference.
-        const needsArc =
-          rwyHdgMag !== null && angleDifference(rwyHdgMag, point.course) > ARC_THRESHOLD_DEG;
-
-        const courseTrue = toTrue(point.course, magneticCorrection);
-
-        let straightStart: { latitude: number; longitude: number };
-        if (needsArc) {
-          const arc = generateArcPoints(
-            previous,
-            toTrue(rwyHdgMag!, magneticCorrection),
-            courseTrue,
-          );
-          currentCoords.push(...arc.coords);
-          straightStart = arc.end;
-        } else {
-          straightStart = previous;
-        }
-
-        const straightDist = needsArc
-          ? MANUAL_ARROW_DISTANCE_NM - ARC_DISTANCE_NM
-          : MANUAL_ARROW_DISTANCE_NM;
-        const tip = destinationPoint(
-          straightStart.latitude,
-          straightStart.longitude,
-          courseTrue,
-          straightDist,
+        const { tip, arc, courseTrue } = manualLegTip(
+          previous,
+          point.course,
+          magneticCorrection,
+          isAtRunwayOrigin ? sequence.transition ?? null : null,
         );
+        if (arc) currentCoords.push(...arc.coords);
         currentCoords.push([tip.longitude, tip.latitude]);
         flushSegment(lineSegments, currentCoords, false);
         currentCoords = [];

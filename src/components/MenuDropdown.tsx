@@ -1,4 +1,4 @@
-import { Component, JSX, onCleanup, onMount } from 'solid-js';
+import { Component, createEffect, JSX, onCleanup } from 'solid-js';
 
 interface MenuDropdownProps {
   isOpen: boolean;
@@ -18,15 +18,20 @@ export const MenuDropdown: Component<MenuDropdownProps> = (props) => {
   let panelRef: HTMLDivElement | undefined;
 
   const handleMouseDown = (e: MouseEvent) => {
-    if (!props.isOpen) return;
     const target = e.target as HTMLElement;
     if (panelRef && panelRef.contains(target)) return;
     if (target.closest(`[${props.toggleDataAttr}]`)) return;
     props.onClose();
   };
 
-  onMount(() => document.addEventListener('mousedown', handleMouseDown));
-  onCleanup(() => document.removeEventListener('mousedown', handleMouseDown));
+  // Only attach the document-level outside-click listener while the dropdown
+  // is open; createEffect's cleanup runs before the next iteration so the
+  // listener detaches cleanly on close + on component unmount.
+  createEffect(() => {
+    if (!props.isOpen) return;
+    document.addEventListener('mousedown', handleMouseDown);
+    onCleanup(() => document.removeEventListener('mousedown', handleMouseDown));
+  });
 
   return (
     <div

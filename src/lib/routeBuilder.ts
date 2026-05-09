@@ -99,10 +99,24 @@ const resolveBodyToken = async (
 export const buildRoute = async (input: RouteInput): Promise<Route> => {
   const errors: RouteError[] = [];
 
-  const [depInfo, destInfo] = await Promise.all([
+  const [depResult, destResult] = await Promise.allSettled([
     fetchAirportInfo(input.departure),
     fetchAirportInfo(input.destination),
   ]);
+  const depInfo = depResult.status === 'fulfilled' ? depResult.value : null;
+  const destInfo = destResult.status === 'fulfilled' ? destResult.value : null;
+  if (depResult.status === 'rejected') {
+    errors.push({
+      token: input.departure,
+      reason: 'Could not fetch departure airport info',
+    });
+  }
+  if (destResult.status === 'rejected') {
+    errors.push({
+      token: input.destination,
+      reason: 'Could not fetch destination airport info',
+    });
+  }
 
   // Best-effort prefetch — not fatal if missing (errors will surface later).
   await Promise.allSettled([
@@ -187,6 +201,15 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       sidProcedure = resolved.procedure;
       sidTransition = resolved.transition;
       sidExitFix = resolved.connectingFix;
+      if (resolved.transitionFallback && head.sidInput.transition) {
+        const tokenStr = head.consumedTokens === 2
+          ? `${tokens[0].raw} ${tokens[1].raw}`
+          : tokens[0].raw;
+        errors.push({
+          token: tokenStr,
+          reason: `Transition "${head.sidInput.transition}" not published for ${head.sidInput.name} — using trunk`,
+        });
+      }
       if (resolved.connectingFix) {
         lastFix = resolved.connectingFix;
         anchor = { lat: resolved.connectingFix.lat, lon: resolved.connectingFix.lon };
@@ -355,6 +378,16 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       starProcedure = resolved.procedure;
       starTransition = resolved.transition;
       starEntryFix = resolved.connectingFix;
+      if (resolved.transitionFallback && tail.starInput.transition) {
+        const lastIdx = tokens.length - 1;
+        const tokenStr = tail.consumedTokens === 2
+          ? `${tokens[lastIdx - 1].raw} ${tokens[lastIdx].raw}`
+          : tokens[lastIdx].raw;
+        errors.push({
+          token: tokenStr,
+          reason: `Transition "${tail.starInput.transition}" not published for ${tail.starInput.name} — using trunk`,
+        });
+      }
       if (
         lastFix &&
         resolved.connectingFix &&

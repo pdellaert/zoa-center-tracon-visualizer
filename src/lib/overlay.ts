@@ -12,6 +12,7 @@ import {
 } from '~/lib/mapGeometry';
 import { Procedure } from '~/lib/types';
 import { buildSequenceGeometry, sequenceLayerId } from '~/lib/procedureGeojson';
+import { isRouteRelevantSequence } from '~/lib/routeFilter';
 import { Route } from '~/lib/routeTypes';
 import { buildRouteGeometry } from '~/lib/routeGeojson';
 
@@ -52,6 +53,36 @@ export const buildProcedureOverlays = (procedure: Procedure): Overlay[] => {
   });
   procedureOverlaysCache.set(procedure, overlays);
   return overlays;
+};
+
+// Per-(originalProcedure, transition) cache so that route resubmits with the
+// same chosen transition return the same filtered Procedure object across
+// re-renders. Without this, the outer procedureOverlaysCache (keyed by
+// Procedure reference) misses every memo tick because the spread literal
+// in filterProcedureForRoute mints a fresh object each call.
+const filteredByTransition = new WeakMap<Procedure, Map<string, Procedure>>();
+
+export const filterProcedureForRoute = (
+  procedure: Procedure,
+  transition: string | null,
+): Procedure => {
+  const key = transition ?? '';
+  let inner = filteredByTransition.get(procedure);
+  if (!inner) {
+    inner = new Map();
+    filteredByTransition.set(procedure, inner);
+  } else {
+    const cached = inner.get(key);
+    if (cached) return cached;
+  }
+  const filtered: Procedure = {
+    ...procedure,
+    sequences: procedure.sequences.filter((s) =>
+      isRouteRelevantSequence(s, procedure.identifier, transition),
+    ),
+  };
+  inner.set(key, filtered);
+  return filtered;
 };
 
 // Single overlay per route. buildRouteGeometry already excludes the SID exit /

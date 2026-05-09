@@ -45,8 +45,7 @@ import { ShareButton } from '~/components/ShareButton';
 import { Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
 import { buildRoute } from '~/lib/routeBuilder';
 import { procedureKey } from '~/lib/procedureGeojson';
-import { buildProcedureOverlays, buildRouteOverlay, Overlay } from '~/lib/overlay';
-import { isRouteRelevantSequence } from '~/lib/routeFilter';
+import { buildProcedureOverlays, buildRouteOverlay, filterProcedureForRoute, Overlay } from '~/lib/overlay';
 import {
   getURLStateParam,
   decodeStateFromURL,
@@ -232,16 +231,13 @@ const App: Component = () => {
     else setCursor('grab');
   });
 
-  const filterProcedureForRoute = (entry: RouteProcedureEntry): Procedure => ({
-    ...entry.procedure,
-    sequences: entry.procedure.sequences.filter((s) =>
-      isRouteRelevantSequence(s, entry.procedure.identifier, entry.transition),
-    ),
-  });
-
   // Filter route-pushed procedures separately so we don't redo this work when
-  // only `displayedProcedures` changes (e.g., user toggles a sidebar SID).
-  const filteredRouteProcs = createMemo(() => routeProcedures().map(filterProcedureForRoute));
+  // only `displayedProcedures` changes (e.g., user toggles a sidebar SID). The
+  // overlay cache hits on identical (procedure, transition) pairs across
+  // unrelated state ticks.
+  const filteredRouteProcs = createMemo(() =>
+    routeProcedures().map((entry) => filterProcedureForRoute(entry.procedure, entry.transition)),
+  );
 
   // Single overlay list passed to AviationOverlayLayers. Stack order is
   // bottom-to-top (Mapbox adds layers in mount order; later wins):
