@@ -1,6 +1,22 @@
 import { navdataAirportUrl, navdataUrl } from '~/lib/config';
 import { AirportInfo, Procedure, ProcedureKind } from '~/lib/types';
 
+// Per-airport pack of all three procedure kinds, with annotations applied
+// (SID runwayOrigin + per-procedure magneticCorrection). Shared by the
+// Procedures sidebar and the Route resolver so both code paths see the same
+// annotated objects and the four navdata endpoints are hit at most once.
+export interface AirportProcedurePack {
+  sids: Procedure[];
+  stars: Procedure[];
+  apps: Procedure[];
+}
+
+const airportProceduresCache = new Map<string, Promise<AirportProcedurePack>>();
+
+export const clearProcedureCache = () => {
+  airportProceduresCache.clear();
+};
+
 interface RawProcedureResponse {
   departureIdentifier?: string;
   arrivalIdentifier?: string;
@@ -156,4 +172,38 @@ export const applyAirportProcedureAnnotations = (
   if (magneticCorrection !== undefined) {
     for (const p of [...sids, ...stars, ...apps]) p.magneticCorrection = magneticCorrection;
   }
+};
+
+// Throws if all three procedure-kind fetches reject (network error, 5xx, etc.).
+// 404s for individual kinds are non-fatal — they fulfill with [] and the
+// other kinds still load. Callers that prefer silent failure (e.g., the route
+// resolver) should catch this throw at their cache wrapper.
+export const loadAirportProcedures = (airport: string): Promise<AirportProcedurePack> => {
+  const cached = airportProceduresCache.get(airport);
+  if (cached) return cached;
+  const promise = (async (): Promise<AirportProcedurePack> => {
+    const [sidResult, starResult, appResult, infoResult] = await Promise.allSettled([
+      fetchProcedures('sid', airport),
+      fetchProcedures('star', airport),
+      fetchProcedures('app', airport),
+      fetchAirportInfo(airport),
+    ]);
+    if (
+      sidResult.status === 'rejected' &&
+      starResult.status === 'rejected' &&
+      appResult.status === 'rejected'
+    ) {
+      throw new Error(`No procedures found for ${airport}`);
+    }
+    const sids = sidResult.status === 'fulfilled' ? sidResult.value : [];
+    const stars = starResult.status === 'fulfilled' ? starResult.value : [];
+    const apps = appResult.status === 'fulfilled' ? appResult.value : [];
+    const info = infoResult.status === 'fulfilled' ? infoResult.value : null;
+    applyAirportProcedureAnnotations(sids, stars, apps, info);
+    return { sids, stars, apps };
+  })();
+  // Don't cache rejections — let the next call retry.
+  promise.catch(() => airportProceduresCache.delete(airport));
+  airportProceduresCache.set(airport, promise);
+  return promise;
 };

@@ -8,11 +8,7 @@ import {
   ProcedureSubsection,
 } from '~/lib/types';
 import { createStore, produce } from 'solid-js/store';
-import {
-  applyAirportProcedureAnnotations,
-  fetchAirportInfo,
-  fetchProcedures,
-} from '~/lib/procedureApi';
+import { loadAirportProcedures } from '~/lib/procedureApi';
 
 interface AirportProceduresProps {
   onProcedureToggle: (procedure: Procedure, isDisplayed: boolean) => void;
@@ -53,27 +49,7 @@ export const AirportProcedures: Component<AirportProceduresProps> = (props) => {
     setIsLoading(true);
 
     try {
-      const [sidResult, starResult, appResult, airportResult] = await Promise.allSettled([
-        fetchProcedures('sid', airport),
-        fetchProcedures('star', airport),
-        fetchProcedures('app', airport),
-        fetchAirportInfo(airport),
-      ]);
-
-      const sids = sidResult.status === 'fulfilled' ? sidResult.value : [];
-      const stars = starResult.status === 'fulfilled' ? starResult.value : [];
-      const apps = appResult.status === 'fulfilled' ? appResult.value : [];
-
-      const allFailed =
-        sidResult.status === 'rejected' &&
-        starResult.status === 'rejected' &&
-        appResult.status === 'rejected';
-      if (allFailed) {
-        throw new Error(`No procedures found for ${airport}`);
-      }
-
-      const info = airportResult.status === 'fulfilled' ? airportResult.value : null;
-      applyAirportProcedureAnnotations(sids, stars, apps, info);
+      const { sids, stars, apps } = await loadAirportProcedures(airport);
 
       setAirportSections(
         produce((sections) => {

@@ -22,20 +22,6 @@ import {
   RouteSegment,
 } from '~/lib/routeTypes';
 
-const errorRoute = (input: RouteInput, errors: RouteError[]): Route => ({
-  departure: input.departure,
-  destination: input.destination,
-  raw: input.raw,
-  segments: [],
-  sidProcedure: null,
-  starProcedure: null,
-  sidTransition: null,
-  starTransition: null,
-  sidExitFix: null,
-  starEntryFix: null,
-  errors,
-});
-
 interface HeadDecision {
   consumedTokens: number; // 0, 1, or 2
   sidInput: SidStarInput | null;
@@ -229,7 +215,9 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
     anchor = departureCoord;
   }
 
-  // Body iteration
+  // Body iteration. Each token's resolution is wrapped so a transient failure
+  // (5xx on a fix lookup, parse error, etc.) doesn't abort the whole route —
+  // the bad token is recorded in `errors[]` and we move on.
   const segments: RouteSegment[] = [];
   let i = 0;
   while (i < bodyTokens.length) {
@@ -240,6 +228,7 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       continue;
     }
 
+    try {
     if (tok.type === 'airway') {
       if (!lastFix) {
         errors.push({ token: tok.raw, reason: 'Airway needs a preceding fix' });
@@ -338,6 +327,13 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
     lastFix = fix;
     anchor = { lat: fix.lat, lon: fix.lon };
     i += 1;
+    } catch (err) {
+      errors.push({
+        token: tok.raw,
+        reason: err instanceof Error ? err.message : String(err),
+      });
+      i += 1;
+    }
   }
 
   // Resolve STAR at the tail
@@ -404,5 +400,3 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
     errors,
   };
 };
-
-export const emptyRoute = errorRoute;

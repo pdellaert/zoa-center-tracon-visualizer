@@ -1,6 +1,5 @@
 import { makePersisted } from '@solid-primitives/storage';
 import { Accessor, Component, createEffect, createMemo, createSignal, DEV, For, Setter, Show, untrack } from 'solid-js';
-import { Sequence } from '~/lib/types';
 import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/lib/defaults';
 import { Section, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui-core';
 import { MapStyleSelector } from '~/components/MapStyleSelector';
@@ -41,12 +40,13 @@ import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geo
 import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
 import { TopMenuBar } from '~/components/TopMenuBar';
-import { ProcedurePoints } from '~/components/ProcedurePoints';
-import { RoutePoints } from '~/components/RoutePoints';
+import { AviationOverlayLayers } from '~/components/AviationOverlayLayers';
 import { ShareButton } from '~/components/ShareButton';
 import { Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
-import { parseRoute } from '~/lib/routeParser';
 import { buildRoute } from '~/lib/routeBuilder';
+import { procedureKey } from '~/lib/procedureGeojson';
+import { buildProcedureOverlays, buildRouteOverlay, Overlay } from '~/lib/overlay';
+import { isRouteRelevantSequence } from '~/lib/routeFilter';
 import {
   getURLStateParam,
   decodeStateFromURL,
@@ -232,29 +232,6 @@ const App: Component = () => {
     else setCursor('grab');
   });
 
-  const procedureKey = (p: Procedure) => `${p.kind}|${p.airport}|${p.identifier}`;
-
-  // Route-pushed SID/STAR is always filtered to the chosen path:
-  //   - per-runway entry / tail sequences (transition begins with RWn)
-  //   - the trunk (transition is empty/null or matches the procedure name)
-  //   - the chosen transition's sequence(s) — when one was filed
-  // Sibling transitions (other published exits / entries) are excluded so the
-  // map shows only the path the route actually takes. The full procedure is
-  // drawn only when the user explicitly toggles it via the Procedures sidebar.
-  const isRouteRelevantSequence = (
-    seq: Sequence,
-    procedureIdentifier: string,
-    chosenTransition: string | null,
-  ): boolean => {
-    const t = seq.transition;
-    // Trunk: empty/null, equals the procedure name, or 'ALL' — the API uses
-    // 'ALL' as the runway-common tail marker on STARs (and some SIDs) to
-    // indicate the path that applies regardless of runway/transition choice.
-    if (!t || t === '' || t === procedureIdentifier || t === 'ALL') return true;
-    if (/^RW\d/.test(t)) return true; // per-runway entry (SID) or runway tail (STAR)
-    return chosenTransition !== null && t === chosenTransition;
-  };
-
   const filterProcedureForRoute = (entry: RouteProcedureEntry): Procedure => ({
     ...entry.procedure,
     sequences: entry.procedure.sequences.filter((s) =>
@@ -262,17 +239,28 @@ const App: Component = () => {
     ),
   });
 
-  // Combined render list:
-  //  - User-toggled procedures (always full).
-  //  - Route procedures, sequence-filtered to the chosen transition. Skipped
-  //    when the user has the same procedure toggled (full version wins so we
-  //    don't render duplicate Mapbox layer ids).
-  const combinedProcedures = createMemo(() => {
-    const userKeys = new Set(displayedProcedures().map(procedureKey));
-    const fromRoute = routeProcedures()
-      .filter((rp) => !userKeys.has(procedureKey(rp.procedure)))
-      .map(filterProcedureForRoute);
-    return [...displayedProcedures(), ...fromRoute];
+  // Filter route-pushed procedures separately so we don't redo this work when
+  // only `displayedProcedures` changes (e.g., user toggles a sidebar SID).
+  const filteredRouteProcs = createMemo(() => routeProcedures().map(filterProcedureForRoute));
+
+  // Single overlay list passed to AviationOverlayLayers. Stack order is
+  // bottom-to-top (Mapbox adds layers in mount order; later wins):
+  //   1. Route line overlay (rendered behind everything else).
+  //   2. Route-pushed SID/STAR procedure overlays, sequence-filtered to the
+  //      chosen transition. Dropped when the user has the same procedure
+  //      toggled in the sidebar (full version wins to avoid duplicate
+  //      Mapbox source ids).
+  //   3. User-toggled procedure overlays (always full, on top).
+  const overlays = createMemo<Overlay[]>(() => {
+    const userProcs = displayedProcedures();
+    const userKeys = new Set(userProcs.map(procedureKey));
+    const userOverlays = userProcs.flatMap(buildProcedureOverlays);
+    const routeProcOverlays = filteredRouteProcs()
+      .filter((p) => !userKeys.has(procedureKey(p)))
+      .flatMap(buildProcedureOverlays);
+    const route = displayedRoute();
+    const routeOverlays = route ? [buildRouteOverlay(route)] : [];
+    return [...routeOverlays, ...routeProcOverlays, ...userOverlays];
   });
 
   const handleProcedureToggle = (procedure: Procedure, isDisplayed: boolean) => {
@@ -286,21 +274,35 @@ const App: Component = () => {
     });
   };
 
+  // Epoch counter discards stale results when the user submits a new route
+  // before the previous one finished resolving. Without this, an earlier
+  // (slower) buildRoute can clobber a later (faster) one.
+  let routeSubmitEpoch = 0;
   const handleRouteSubmit = async (input: RouteInput) => {
-    console.log('[route] submit', input);
-    console.log('[route] parsed', parseRoute(input.raw).tokens);
+    const myEpoch = ++routeSubmitEpoch;
+    if (import.meta.env.DEV) console.log('[route] submit', input);
     try {
       const route = await buildRoute(input);
-      console.log('[route] resolved', route);
-      setDisplayedRoute(route);
+      if (myEpoch !== routeSubmitEpoch) return;
+      if (import.meta.env.DEV) console.log('[route] resolved', route);
 
       const entries: RouteProcedureEntry[] = [];
       if (route.sidProcedure)
         entries.push({ procedure: route.sidProcedure, transition: route.sidTransition });
       if (route.starProcedure)
         entries.push({ procedure: route.starProcedure, transition: route.starTransition });
+
+      // Zap the previous route state before applying the new one. This forces
+      // the procedure-fix-source / route-fix-source to unmount and remount
+      // with fresh data; setData alone doesn't reliably refresh Mapbox's
+      // symbol-layer text rendering when only the source data changes between
+      // back-to-back route submissions.
+      setRouteProcedures([]);
+      setDisplayedRoute(null);
+      setDisplayedRoute(route);
       setRouteProcedures(entries);
     } catch (err) {
+      if (myEpoch !== routeSubmitEpoch) return;
       console.error('[route] build failed', err);
     }
   };
@@ -714,8 +716,7 @@ const App: Component = () => {
           <GeojsonPolySources sources={allSources} />
           <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} is3D={is3D} />
           <GeojsonPolyLayers displayStateStore={allStore} type="center" is3D={is3D} />
-          <RoutePoints route={displayedRoute()} />
-          <ProcedurePoints procedures={combinedProcedures()} />
+          <AviationOverlayLayers overlays={overlays()} />
         </MapGL>
         </div>
       </div>

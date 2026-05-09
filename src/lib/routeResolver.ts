@@ -6,14 +6,16 @@ import {
   ARROW_LEGTYPES,
   destinationPoint,
   distanceBetween,
+  isValidCoord,
   MANUAL_ARROW_DISTANCE_NM,
   toTrue,
-} from '~/lib/procedureGeojson';
+} from '~/lib/mapGeometry';
 import {
-  applyAirportProcedureAnnotations,
-  fetchAirportInfo,
-  fetchProcedures,
+  AirportProcedurePack,
+  clearProcedureCache,
+  loadAirportProcedures,
 } from '~/lib/procedureApi';
+import { isTrunkTransition } from '~/lib/routeFilter';
 import {
   Airway,
   AirwayPoint,
@@ -23,19 +25,9 @@ import {
 } from '~/lib/types';
 import { Coord, RouteFix } from '~/lib/routeTypes';
 
-///////////////////////////////////////////////////
-// Coord validity
-///////////////////////////////////////////////////
-// A fix with both lat and lon equal to zero is the API's sentinel for
-// "coordinates unknown" — those points sit on the equator at Greenwich, which
-// is never where a real navaid lives in this dataset. Treat such results as
-// missing rather than rendering a line to (0, 0).
-export const isValidCoord = (lat: number | null | undefined, lon: number | null | undefined): boolean =>
-  lat != null &&
-  lon != null &&
-  Number.isFinite(lat) &&
-  Number.isFinite(lon) &&
-  !(lat === 0 && lon === 0);
+// Re-exported for any consumer that imports from routeResolver. New code
+// should import directly from '~/lib/mapGeometry'.
+export { isValidCoord };
 
 ///////////////////////////////////////////////////
 // Lat/lon parsing
@@ -93,41 +85,23 @@ export const latLonTokenToFix = (raw: string): RouteFix | null => {
 
 const pointCache = new Map<string, PointLookupResult[]>();
 const airwayCache = new Map<string, Airway[]>();
-// Per-airport caches for the procedures-by-kind triple. We fetch SIDs + STARs
-// + approaches together so SID `runwayOrigin` annotations can be applied once
-// up-front (the annotation pulls runway thresholds from the approaches).
-interface AirportProcedurePack {
-  sids: Procedure[];
-  stars: Procedure[];
-  apps: Procedure[];
-}
-const airportProceduresCache = new Map<string, Promise<AirportProcedurePack>>();
 
 export const clearRouteCaches = () => {
   pointCache.clear();
   airwayCache.clear();
-  airportProceduresCache.clear();
+  clearProcedureCache();
 };
 
-const fetchAirportProcedures = (airport: string): Promise<AirportProcedurePack> => {
-  const cached = airportProceduresCache.get(airport);
-  if (cached) return cached;
-  const promise = (async (): Promise<AirportProcedurePack> => {
-    const [sidResult, starResult, appResult, infoResult] = await Promise.allSettled([
-      fetchProcedures('sid', airport),
-      fetchProcedures('star', airport),
-      fetchProcedures('app', airport),
-      fetchAirportInfo(airport),
-    ]);
-    const sids = sidResult.status === 'fulfilled' ? sidResult.value : [];
-    const stars = starResult.status === 'fulfilled' ? starResult.value : [];
-    const apps = appResult.status === 'fulfilled' ? appResult.value : [];
-    const info = infoResult.status === 'fulfilled' ? infoResult.value : null;
-    applyAirportProcedureAnnotations(sids, stars, apps, info);
-    return { sids, stars, apps };
-  })();
-  airportProceduresCache.set(airport, promise);
-  return promise;
+// Wrap the shared per-airport loader so a network failure here returns an
+// empty pack instead of bubbling up — the route builder treats absent
+// procedures as "no SID found" / "no STAR found" rather than aborting.
+const EMPTY_PACK: AirportProcedurePack = { sids: [], stars: [], apps: [] };
+const loadAirportProceduresSafe = async (airport: string): Promise<AirportProcedurePack> => {
+  try {
+    return await loadAirportProcedures(airport);
+  } catch {
+    return EMPTY_PACK;
+  }
 };
 
 ///////////////////////////////////////////////////
@@ -253,6 +227,33 @@ const splitAirwaySubSegments = (airway: Airway): AirwayPoint[][] => {
   return segs;
 };
 
+interface AirwayIndex {
+  subSegs: AirwayPoint[][];
+  idToPositions: Map<string, { segIdx: number; ptIdx: number }[]>;
+}
+
+// Cache the sub-segment split + identifier index per Airway. The split + index
+// build is O(n); without this, every findAirwayPath call rebuilds it from
+// scratch even when the same airway is sliced multiple times in a session.
+const airwayIndexCache = new WeakMap<Airway, AirwayIndex>();
+
+const indexAirway = (airway: Airway): AirwayIndex => {
+  const cached = airwayIndexCache.get(airway);
+  if (cached) return cached;
+  const subSegs = splitAirwaySubSegments(airway);
+  const idToPositions = new Map<string, { segIdx: number; ptIdx: number }[]>();
+  subSegs.forEach((seg, segIdx) => {
+    seg.forEach((pt, ptIdx) => {
+      const list = idToPositions.get(pt.identifier);
+      if (list) list.push({ segIdx, ptIdx });
+      else idToPositions.set(pt.identifier, [{ segIdx, ptIdx }]);
+    });
+  });
+  const index = { subSegs, idToPositions };
+  airwayIndexCache.set(airway, index);
+  return index;
+};
+
 /**
  * BFS from `fromId` to `toId` across the airway's sub-segment graph. Within
  * each sub-segment, consecutive points are bidirectional neighbors. Across
@@ -265,17 +266,7 @@ const findAirwayPath = (
   fromId: string,
   toId: string,
 ): AirwayPoint[] | null => {
-  const subSegs = splitAirwaySubSegments(airway);
-
-  // Index every occurrence so duplicates can join sub-segments.
-  const idToPositions = new Map<string, { segIdx: number; ptIdx: number }[]>();
-  subSegs.forEach((seg, segIdx) => {
-    seg.forEach((pt, ptIdx) => {
-      const list = idToPositions.get(pt.identifier);
-      if (list) list.push({ segIdx, ptIdx });
-      else idToPositions.set(pt.identifier, [{ segIdx, ptIdx }]);
-    });
-  });
+  const { subSegs, idToPositions } = indexAirway(airway);
   if (!idToPositions.has(fromId) || !idToPositions.has(toId)) return null;
 
   const visited = new Set<string>([fromId]);
@@ -347,10 +338,10 @@ export const resolveAirwaySegment = async (
 ///////////////////////////////////////////////////
 
 const cachedDepartures = async (airport: string): Promise<Procedure[]> =>
-  (await fetchAirportProcedures(airport)).sids;
+  (await loadAirportProceduresSafe(airport)).sids;
 
 const cachedArrivals = async (airport: string): Promise<Procedure[]> =>
-  (await fetchAirportProcedures(airport)).stars;
+  (await loadAirportProceduresSafe(airport)).stars;
 
 /**
  * The "connecting fix" for a SID/STAR transition — the fix at which the en-route
@@ -363,13 +354,6 @@ const cachedArrivals = async (airport: string): Promise<Procedure[]> =>
  * procedure identifier). That means the connection point is whichever fix the
  * trunk's first/last point lands on — typically the published common fix.
  */
-// Sequences that the API considers part of the procedure's "trunk" — the
-// path that applies regardless of which transition (if any) you chose. The
-// navdata uses 'ALL' for runway-common tails of STARs (and some SIDs),
-// in addition to the more obvious empty/null/procedure-named conventions.
-const isTrunkTransition = (t: string | null | undefined, procedureIdentifier: string): boolean =>
-  !t || t === '' || t === procedureIdentifier || t === 'ALL';
-
 const sequencesForTransition = (procedure: Procedure, transition: string | null): Sequence[] => {
   if (transition !== null) {
     const matched = procedure.sequences.filter((s) => s.transition === transition);
@@ -469,21 +453,13 @@ const sidVectorTip = (
   };
 };
 
-const splitDotToken = (token: string, side: 'sid' | 'star'): SidStarInput => {
-  const [a, b] = token.split('.');
-  if (side === 'sid') return { name: a, transition: b ?? null };
-  // STAR convention: <transition>.<STAR>
-  return { name: b ?? a, transition: b ? a : null };
-};
-
 export const resolveSidStar = async (
-  input: string | SidStarInput,
+  input: SidStarInput,
   side: 'sid' | 'star',
   airport: string,
 ): Promise<SidStarResolution | null> => {
-  const parsed: SidStarInput = typeof input === 'string' ? splitDotToken(input, side) : input;
   const procedures = side === 'sid' ? await cachedDepartures(airport) : await cachedArrivals(airport);
-  const procedure = procedures.find((p) => p.identifier === parsed.name);
+  const procedure = procedures.find((p) => p.identifier === input.name);
   if (!procedure) return null;
 
   // We return the FULL procedure (every sequence the API published) so the
@@ -491,8 +467,8 @@ export const resolveSidStar = async (
   // exit transition / runway tail. Only the *connecting fix* — the point at
   // which the en-route blue line attaches — is computed from the chosen
   // transition's sequence.
-  const transitionSeqs = sequencesForTransition(procedure, parsed.transition);
-  if (parsed.transition !== null && transitionSeqs.length === 0) return null;
+  const transitionSeqs = sequencesForTransition(procedure, input.transition);
+  if (input.transition !== null && transitionSeqs.length === 0) return null;
 
   let connectingFix: RouteFix | null = null;
   let endsWithVector = false;
@@ -514,7 +490,7 @@ export const resolveSidStar = async (
   return {
     procedure,
     connectingFix,
-    transition: parsed.transition,
+    transition: input.transition,
     endsWithVector,
   };
 };

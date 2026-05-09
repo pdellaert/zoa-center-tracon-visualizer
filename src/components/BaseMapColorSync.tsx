@@ -39,7 +39,7 @@ export const BaseMapColorSync: Component<{ isDark: boolean }> = (props) => {
       const circleStrokeColor = dark ? '#000000' : '#ffffff';
       const casingColor = dark ? '#000000' : '#ffffff';
 
-      const procedureLineCasingPrefix = /^(sid|star|app|route)-(line-casing|arrow-casing)(-|$)/;
+      const overlayLineCasingPrefix = /^(sid|star|app|route)-(line-casing|arrow-casing)(-|$)/;
 
       for (const layer of ctx.map.getStyle().layers) {
         if (layer.id.endsWith('-text-layer')) {
@@ -47,7 +47,7 @@ export const BaseMapColorSync: Component<{ isDark: boolean }> = (props) => {
         } else if (layer.id === 'procedure-fix-points' || layer.id === 'route-fix-points') {
           ctx.map.setPaintProperty(layer.id, 'circle-color', circleColor);
           ctx.map.setPaintProperty(layer.id, 'circle-stroke-color', circleStrokeColor);
-        } else if (procedureLineCasingPrefix.test(layer.id)) {
+        } else if (overlayLineCasingPrefix.test(layer.id)) {
           ctx.map.setPaintProperty(layer.id, 'line-color', casingColor);
         }
       }

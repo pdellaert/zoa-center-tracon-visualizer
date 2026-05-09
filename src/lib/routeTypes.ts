@@ -26,7 +26,7 @@ export type RouteSegment =
     };
 
 export interface RouteProcedureEntry {
-  procedure: import('~/lib/types').Procedure;
+  procedure: Procedure;
   transition: string | null;
 }
 

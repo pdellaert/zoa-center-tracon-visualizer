@@ -18,7 +18,6 @@ export interface ParseResult {
 }
 
 const LATLON_RE = /^\d{2,4}[NS]\/?\d{3,5}[EW]$/;
-const LATLON_SHORT_RE = /^\d{2}[NS]\/?\d{2,3}[EW]$/;
 const FRD_RE = /^[A-Z]{3,5}\d{6}$/;
 const AIRWAY_RE = /^[A-Z]{1,2}\d{1,4}$/;
 
@@ -30,7 +29,7 @@ export const tokenize = (raw: string): string[] =>
 
 const classifyStandalone = (t: string): TokenType => {
   if (t === 'DCT') return 'dct';
-  if (LATLON_RE.test(t) || LATLON_SHORT_RE.test(t)) return 'latlon';
+  if (LATLON_RE.test(t)) return 'latlon';
   if (FRD_RE.test(t)) return 'frd';
   if (AIRWAY_RE.test(t)) return 'airway';
   return 'fix';
