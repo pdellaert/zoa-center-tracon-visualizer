@@ -352,15 +352,31 @@ const App: Component = () => {
     setDisplayedFixes((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const standaloneFixFeatures = createMemo<FixFeature[]>(() =>
-    displayedFixes().flatMap((entry) =>
-      entry.candidates.map((c) => ({
-        type: 'Feature' as const,
-        geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] as [number, number] },
-        properties: { text: entry.input, identifier: c.identifier },
-      })),
-    ),
-  );
+  // Identifiers already drawn by procedure/route fix sources — used to suppress
+  // standalone-fix candidates that would otherwise render an overlapping dot
+  // and label at the same coord.
+  const overlayFixIdentifiers = createMemo(() => {
+    const ids = new Set<string>();
+    for (const o of overlays()) {
+      for (const f of o.fixFeatures) {
+        if (f.properties.identifier) ids.add(f.properties.identifier);
+      }
+    }
+    return ids;
+  });
+
+  const standaloneFixFeatures = createMemo<FixFeature[]>(() => {
+    const blocked = overlayFixIdentifiers();
+    return displayedFixes().flatMap((entry) =>
+      entry.candidates
+        .filter((c) => !blocked.has(c.identifier))
+        .map((c) => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] as [number, number] },
+          properties: { text: entry.input, identifier: c.identifier },
+        })),
+    );
+  });
 
   // Helper to create a persisted config signal that uses URL state if available
   // makePersisted ignores initial value if localStorage has data, so we must
