@@ -39,7 +39,7 @@ import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
 import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson';
 import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
-import { ProceduresDialog } from '~/components/ProceduresDialog';
+import { TopMenuBar } from '~/components/TopMenuBar';
 import { ProcedurePoints } from '~/components/ProcedurePoints';
 import { ShareButton } from '~/components/ShareButton';
 import {
@@ -360,14 +360,6 @@ const App: Component = () => {
         <div class="flex flex-col space-y-4">
           <h1 class="text-white text-2xl">ZOA Visualizer</h1>
 
-          <button
-            onClick={() => setIsProceduresOpen((prev) => !prev)}
-            class="flex items-center justify-center w-36 h-10 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors cursor-pointer"
-            title="Airport Procedures"
-          >
-            Procedures
-          </button>
-
           <Section header="Style">
             <MapStyleSelector style={mapStyle} setStyle={setMapStyle} />
           </Section>
@@ -599,10 +591,12 @@ const App: Component = () => {
         </div>
         <Footer />
       </div>
-      <div class="grow relative">
-        <InfoPopup popupState={popup} settings={settings} />
-
-        <div class="absolute top-5 left-5 z-50 flex space-x-2">
+      <div class="flex flex-col grow min-w-0">
+        <TopMenuBar
+          proceduresOpen={isProceduresOpen()}
+          setProceduresOpen={setIsProceduresOpen}
+          onProcedureToggle={handleProcedureToggle}
+        >
           <SettingsDialog settings={settings} setSettings={setSettings} />
           <ShareButton
             store={allStore}
@@ -613,7 +607,9 @@ const App: Component = () => {
             oakConfig={oakConfig}
             sjcConfig={sjcConfig}
           />
-        </div>
+        </TopMenuBar>
+        <div class="grow relative">
+        <InfoPopup popupState={popup} settings={settings} />
 
         <div class="absolute top-5 right-5 z-50 flex space-x-2">
           <MapReset viewport={viewport()} setViewport={setViewport} />
@@ -645,13 +641,9 @@ const App: Component = () => {
           <GeojsonPolyLayers displayStateStore={allStore} type="center" is3D={is3D} />
           <ProcedurePoints procedures={displayedProcedures()} />
         </MapGL>
+        </div>
       </div>
 
-      <ProceduresDialog
-        isOpen={isProceduresOpen()}
-        onClose={() => setIsProceduresOpen(false)}
-        onProcedureToggle={handleProcedureToggle}
-      />
     </div>
   );
 };
