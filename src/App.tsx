@@ -39,7 +39,7 @@ import { GeoJSONFeature, MapMouseEvent } from 'mapbox-gl';
 import { getUniqueLayers, isTransparentFill, getGeojsonSources } from '~/lib/geojson';
 import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
-import { TopMenuBar } from '~/components/TopMenuBar';
+import { TopMenuBar, OpenMenu } from '~/components/TopMenuBar';
 import { AviationOverlayLayers } from '~/components/AviationOverlayLayers';
 import { ShareButton } from '~/components/ShareButton';
 import { Coord, Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
@@ -53,6 +53,7 @@ import {
   parseFixRadialDistance,
   resolveFixAllCandidates,
 } from '~/lib/routeResolver';
+import { FRD_RE } from '~/lib/routeParser';
 import { runIfDev } from '~/lib/dev';
 import {
   getURLStateParam,
@@ -61,6 +62,8 @@ import {
   getURLConfigState,
   DEFAULT_CONFIGS,
 } from '~/lib/urlState';
+
+const EMPTY_FIX_FEATURES: FixFeature[] = [];
 
 const createCenterDefaultState = (area: CenterAreaDefinition): CenterAirspaceDisplayState => ({
   name: area.name,
@@ -182,9 +185,7 @@ const App: Component = () => {
 
   const [displayedProcedures, setDisplayedProcedures] = createSignal<Procedure[]>([]);
   const [routeProcedures, setRouteProcedures] = createSignal<RouteProcedureEntry[]>([]);
-  const [isProceduresOpen, setIsProceduresOpen] = createSignal(false);
-  const [isRouteOpen, setIsRouteOpen] = createSignal(false);
-  const [isFixesOpen, setIsFixesOpen] = createSignal(false);
+  const [openMenu, setOpenMenu] = createSignal<OpenMenu>(null);
   const [displayedFixes, setDisplayedFixes] = createSignal<DisplayedFix[]>([]);
   const [displayedRoute, setDisplayedRoute] = createSignal<Route | null>(null);
   const [is3D, setIs3D] = createSignal(false);
@@ -326,7 +327,7 @@ const App: Component = () => {
       return null;
     }
 
-    if (/^[A-Z]{3,5}\d{3}\d{3}$/.test(upper)) {
+    if (FRD_RE.test(upper)) {
       const frd = await parseFixRadialDistance(upper, mapCenter());
       if (!frd) return 'Could not resolve FRD';
       appendFix(upper, 'frd', [{ identifier: frd.identifier, lat: frd.lat, lon: frd.lon }]);
@@ -366,8 +367,10 @@ const App: Component = () => {
   });
 
   const standaloneFixFeatures = createMemo<FixFeature[]>(() => {
+    const fixes = displayedFixes();
+    if (fixes.length === 0) return EMPTY_FIX_FEATURES;
     const blocked = overlayFixIdentifiers();
-    return displayedFixes().flatMap((entry) =>
+    const out = fixes.flatMap((entry) =>
       entry.candidates
         .filter((c) => !blocked.has(c.identifier))
         .map((c) => ({
@@ -376,6 +379,7 @@ const App: Component = () => {
           properties: { text: entry.input, identifier: c.identifier },
         })),
     );
+    return out.length === 0 ? EMPTY_FIX_FEATURES : out;
   });
 
   // Helper to create a persisted config signal that uses URL state if available
@@ -731,16 +735,12 @@ const App: Component = () => {
       </div>
       <div class="flex flex-col grow min-w-0">
         <TopMenuBar
-          proceduresOpen={isProceduresOpen()}
-          setProceduresOpen={setIsProceduresOpen}
+          openMenu={openMenu()}
+          setOpenMenu={setOpenMenu}
           onProcedureToggle={handleProcedureToggle}
-          routeOpen={isRouteOpen()}
-          setRouteOpen={setIsRouteOpen}
           onRouteSubmit={handleRouteSubmit}
           onRouteClear={handleRouteClear}
           routeResult={displayedRoute()}
-          fixesOpen={isFixesOpen()}
-          setFixesOpen={setIsFixesOpen}
           fixes={displayedFixes()}
           onFixAdd={handleFixAdd}
           onFixRemove={handleFixRemove}

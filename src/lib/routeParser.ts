@@ -18,7 +18,7 @@ export interface ParseResult {
 }
 
 const LATLON_RE = /^\d{2,4}[NS]\/?\d{3,5}[EW]$/;
-const FRD_RE = /^[A-Z]{3,5}\d{6}$/;
+export const FRD_RE = /^[A-Z]{3,5}\d{6}$/;
 const AIRWAY_RE = /^[A-Z]{1,2}\d{1,4}$/;
 
 export const tokenize = (raw: string): string[] =>

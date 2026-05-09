@@ -144,119 +144,49 @@ export const AviationOverlayLayers: Component<AviationOverlayLayersProps> = (pro
         }}
       </For>
 
-      <Show when={procedureFixFeatures().length > 0}>
-        <Source
-          id="procedure-fix-source"
-          source={{
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: procedureFixFeatures() },
-          }}
-        >
-          <Layer
-            id="procedure-fix-text-layer"
-            style={{
-              type: 'symbol',
-              layout: {
-                'text-field': ['get', 'text'],
-                'text-rotation-alignment': 'auto',
-                'text-allow-overlap': true,
-                'text-anchor': 'top',
-                'text-size': 12,
-                'text-offset': [0, 0.5],
-              },
-              paint: { 'text-color': '#000000' },
-            }}
-          />
-          <Layer
-            id="procedure-fix-points"
-            style={{
-              type: 'circle',
-              paint: {
-                'circle-radius': 4,
-                'circle-color': '#000000',
-                'circle-stroke-width': 1,
-                'circle-stroke-color': '#ffffff',
-              },
-            }}
-          />
-        </Source>
-      </Show>
-
-      <Show when={routeFixFeatures().length > 0}>
-        <Source
-          id="route-fix-source"
-          source={{
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: routeFixFeatures() },
-          }}
-        >
-          <Layer
-            id="route-fix-text-layer"
-            style={{
-              type: 'symbol',
-              layout: {
-                'text-field': ['get', 'text'],
-                'text-rotation-alignment': 'auto',
-                'text-allow-overlap': true,
-                'text-anchor': 'top',
-                'text-size': 12,
-                'text-offset': [0, 0.5],
-              },
-              paint: { 'text-color': '#000000' },
-            }}
-          />
-          <Layer
-            id="route-fix-points"
-            style={{
-              type: 'circle',
-              paint: {
-                'circle-radius': 4,
-                'circle-color': '#000000',
-                'circle-stroke-width': 1,
-                'circle-stroke-color': '#ffffff',
-              },
-            }}
-          />
-        </Source>
-      </Show>
-
-      <Show when={(props.standaloneFixFeatures?.length ?? 0) > 0}>
-        <Source
-          id="fixes-fix-source"
-          source={{
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: props.standaloneFixFeatures ?? [] },
-          }}
-        >
-          <Layer
-            id="fixes-fix-text-layer"
-            style={{
-              type: 'symbol',
-              layout: {
-                'text-field': ['get', 'text'],
-                'text-rotation-alignment': 'auto',
-                'text-allow-overlap': true,
-                'text-anchor': 'top',
-                'text-size': 12,
-                'text-offset': [0, 0.5],
-              },
-              paint: { 'text-color': '#000000' },
-            }}
-          />
-          <Layer
-            id="fixes-fix-points"
-            style={{
-              type: 'circle',
-              paint: {
-                'circle-radius': 4,
-                'circle-color': '#000000',
-                'circle-stroke-width': 1,
-                'circle-stroke-color': '#ffffff',
-              },
-            }}
-          />
-        </Source>
-      </Show>
+      <FixSource idPrefix="procedure" features={procedureFixFeatures()} />
+      <FixSource idPrefix="route" features={routeFixFeatures()} />
+      <FixSource idPrefix="fixes" features={props.standaloneFixFeatures ?? []} />
     </>
   );
 };
+
+const FixSource: Component<{ idPrefix: string; features: FixFeature[] }> = (props) => (
+  <Show when={props.features.length > 0}>
+    <Source
+      id={`${props.idPrefix}-fix-source`}
+      source={{
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: props.features },
+      }}
+    >
+      <Layer
+        id={`${props.idPrefix}-fix-text-layer`}
+        style={{
+          type: 'symbol',
+          layout: {
+            'text-field': ['get', 'text'],
+            'text-rotation-alignment': 'auto',
+            'text-allow-overlap': true,
+            'text-anchor': 'top',
+            'text-size': 12,
+            'text-offset': [0, 0.5],
+          },
+          paint: { 'text-color': '#000000' },
+        }}
+      />
+      <Layer
+        id={`${props.idPrefix}-fix-points`}
+        style={{
+          type: 'circle',
+          paint: {
+            'circle-radius': 4,
+            'circle-color': '#000000',
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#ffffff',
+          },
+        }}
+      />
+    </Source>
+  </Show>
+);

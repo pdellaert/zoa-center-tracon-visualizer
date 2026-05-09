@@ -116,30 +116,6 @@ const loadAirportProceduresSafe = async (airport: string): Promise<AirportProced
   }
 };
 
-export const resolveFix = async (
-  id: string,
-  anchor: Coord | null,
-): Promise<RouteFix | null> => {
-  const allResults = await fetchPoints(id);
-  const results = allResults.filter((r) => isValidCoord(r.latitude, r.longitude));
-  if (results.length === 0) return null;
-  const pick =
-    anchor && results.length > 1
-      ? results.reduce((best, cur) =>
-          distanceBetween(anchor.lat, anchor.lon, cur.latitude, cur.longitude) <
-          distanceBetween(anchor.lat, anchor.lon, best.latitude, best.longitude)
-            ? cur
-            : best,
-        )
-      : results[0];
-  return {
-    identifier: pick.identifier,
-    lat: pick.latitude,
-    lon: pick.longitude,
-    label: pick.identifier,
-  };
-};
-
 export const resolveFixAllCandidates = async (id: string): Promise<RouteFix[]> => {
   const all = await fetchPoints(id);
   return all
@@ -150,6 +126,21 @@ export const resolveFixAllCandidates = async (id: string): Promise<RouteFix[]> =
       lon: r.longitude,
       label: r.identifier,
     }));
+};
+
+export const resolveFix = async (
+  id: string,
+  anchor: Coord | null,
+): Promise<RouteFix | null> => {
+  const all = await resolveFixAllCandidates(id);
+  if (all.length === 0) return null;
+  if (!anchor || all.length === 1) return all[0];
+  return all.reduce((best, cur) =>
+    distanceBetween(anchor.lat, anchor.lon, cur.lat, cur.lon) <
+    distanceBetween(anchor.lat, anchor.lon, best.lat, best.lon)
+      ? cur
+      : best,
+  );
 };
 
 export const parseFixRadialDistance = async (
