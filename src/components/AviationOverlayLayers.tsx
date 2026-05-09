@@ -1,10 +1,11 @@
 import { Component, createMemo, For, Show } from 'solid-js';
 import { Layer, Source } from 'solid-map-gl';
-import { lineSegmentsToFeatures } from '~/lib/mapGeometry';
+import { FixFeature, lineSegmentsToFeatures } from '~/lib/mapGeometry';
 import { aggregateOverlayFixFeatures, Overlay, OverlayKind } from '~/lib/overlay';
 
 interface AviationOverlayLayersProps {
   overlays: Overlay[];
+  standaloneFixFeatures?: FixFeature[];
 }
 
 const KIND_LINE_COLOR: Record<OverlayKind, string> = {
@@ -206,6 +207,44 @@ export const AviationOverlayLayers: Component<AviationOverlayLayersProps> = (pro
           />
           <Layer
             id="route-fix-points"
+            style={{
+              type: 'circle',
+              paint: {
+                'circle-radius': 4,
+                'circle-color': '#000000',
+                'circle-stroke-width': 1,
+                'circle-stroke-color': '#ffffff',
+              },
+            }}
+          />
+        </Source>
+      </Show>
+
+      <Show when={(props.standaloneFixFeatures?.length ?? 0) > 0}>
+        <Source
+          id="fixes-fix-source"
+          source={{
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: props.standaloneFixFeatures ?? [] },
+          }}
+        >
+          <Layer
+            id="fixes-fix-text-layer"
+            style={{
+              type: 'symbol',
+              layout: {
+                'text-field': ['get', 'text'],
+                'text-rotation-alignment': 'auto',
+                'text-allow-overlap': true,
+                'text-anchor': 'top',
+                'text-size': 12,
+                'text-offset': [0, 0.5],
+              },
+              paint: { 'text-color': '#000000' },
+            }}
+          />
+          <Layer
+            id="fixes-fix-points"
             style={{
               type: 'circle',
               paint: {

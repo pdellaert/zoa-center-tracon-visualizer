@@ -140,6 +140,18 @@ export const resolveFix = async (
   };
 };
 
+export const resolveFixAllCandidates = async (id: string): Promise<RouteFix[]> => {
+  const all = await fetchPoints(id);
+  return all
+    .filter((r) => isValidCoord(r.latitude, r.longitude))
+    .map((r) => ({
+      identifier: r.identifier,
+      lat: r.latitude,
+      lon: r.longitude,
+      label: r.identifier,
+    }));
+};
+
 export const parseFixRadialDistance = async (
   raw: string,
   anchor: Coord | null,

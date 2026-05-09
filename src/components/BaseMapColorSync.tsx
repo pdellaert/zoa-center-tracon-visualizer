@@ -44,7 +44,11 @@ export const BaseMapColorSync: Component<{ isDark: boolean }> = (props) => {
       for (const layer of ctx.map.getStyle().layers) {
         if (layer.id.endsWith('-text-layer')) {
           ctx.map.setPaintProperty(layer.id, 'text-color', textColor);
-        } else if (layer.id === 'procedure-fix-points' || layer.id === 'route-fix-points') {
+        } else if (
+          layer.id === 'procedure-fix-points' ||
+          layer.id === 'route-fix-points' ||
+          layer.id === 'fixes-fix-points'
+        ) {
           ctx.map.setPaintProperty(layer.id, 'circle-color', circleColor);
           ctx.map.setPaintProperty(layer.id, 'circle-stroke-color', circleStrokeColor);
         } else if (overlayLineCasingPrefix.test(layer.id)) {

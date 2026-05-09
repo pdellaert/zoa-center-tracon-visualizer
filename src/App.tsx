@@ -42,10 +42,17 @@ import { InfoPopup } from '~/components/InfoPopup';
 import { TopMenuBar } from '~/components/TopMenuBar';
 import { AviationOverlayLayers } from '~/components/AviationOverlayLayers';
 import { ShareButton } from '~/components/ShareButton';
-import { Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
+import { Coord, Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
 import { buildRoute } from '~/lib/routeBuilder';
 import { procedureKey } from '~/lib/procedureGeojson';
 import { buildProcedureOverlays, buildRouteOverlay, filterProcedureForRoute, Overlay } from '~/lib/overlay';
+import { DisplayedFix, FixCandidate } from '~/lib/fixesTypes';
+import { FixFeature } from '~/lib/mapGeometry';
+import {
+  latLonTokenToFix,
+  parseFixRadialDistance,
+  resolveFixAllCandidates,
+} from '~/lib/routeResolver';
 import { runIfDev } from '~/lib/dev';
 import {
   getURLStateParam,
@@ -177,6 +184,8 @@ const App: Component = () => {
   const [routeProcedures, setRouteProcedures] = createSignal<RouteProcedureEntry[]>([]);
   const [isProceduresOpen, setIsProceduresOpen] = createSignal(false);
   const [isRouteOpen, setIsRouteOpen] = createSignal(false);
+  const [isFixesOpen, setIsFixesOpen] = createSignal(false);
+  const [displayedFixes, setDisplayedFixes] = createSignal<DisplayedFix[]>([]);
   const [displayedRoute, setDisplayedRoute] = createSignal<Route | null>(null);
   const [is3D, setIs3D] = createSignal(false);
 
@@ -296,6 +305,62 @@ const App: Component = () => {
     setRouteProcedures([]);
     setDisplayedRoute(null);
   };
+
+  const mapCenter = (): Coord => {
+    const c = viewport().center as unknown;
+    if (Array.isArray(c)) return { lon: c[0] as number, lat: c[1] as number };
+    const obj = c as { lng?: number; lon?: number; lat: number };
+    return { lon: (obj.lng ?? obj.lon ?? 0) as number, lat: obj.lat };
+  };
+
+  let fixIdCounter = 0;
+
+  const handleFixAdd = async (rawInput: string): Promise<string | null> => {
+    const upper = rawInput.trim().toUpperCase();
+    if (!upper) return 'Enter a fix, FRD, or lat/lon';
+    if (displayedFixes().some((f) => f.input === upper)) return 'Already added';
+
+    const ll = latLonTokenToFix(upper);
+    if (ll) {
+      appendFix(upper, 'latlon', [{ identifier: ll.identifier, lat: ll.lat, lon: ll.lon }]);
+      return null;
+    }
+
+    if (/^[A-Z]{3,5}\d{3}\d{3}$/.test(upper)) {
+      const frd = await parseFixRadialDistance(upper, mapCenter());
+      if (!frd) return 'Could not resolve FRD';
+      appendFix(upper, 'frd', [{ identifier: frd.identifier, lat: frd.lat, lon: frd.lon }]);
+      return null;
+    }
+
+    const candidates = await resolveFixAllCandidates(upper);
+    if (candidates.length === 0) return 'Fix not found';
+    appendFix(
+      upper,
+      'fix',
+      candidates.map((c) => ({ identifier: c.identifier, lat: c.lat, lon: c.lon })),
+    );
+    return null;
+  };
+
+  const appendFix = (input: string, kind: DisplayedFix['kind'], candidates: FixCandidate[]) => {
+    const entry: DisplayedFix = { id: `fix-${++fixIdCounter}`, input, kind, candidates };
+    setDisplayedFixes((prev) => [...prev, entry]);
+  };
+
+  const handleFixRemove = (id: string) => {
+    setDisplayedFixes((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const standaloneFixFeatures = createMemo<FixFeature[]>(() =>
+    displayedFixes().flatMap((entry) =>
+      entry.candidates.map((c) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] as [number, number] },
+        properties: { text: entry.input, identifier: c.identifier },
+      })),
+    ),
+  );
 
   // Helper to create a persisted config signal that uses URL state if available
   // makePersisted ignores initial value if localStorage has data, so we must
@@ -658,6 +723,11 @@ const App: Component = () => {
           onRouteSubmit={handleRouteSubmit}
           onRouteClear={handleRouteClear}
           routeResult={displayedRoute()}
+          fixesOpen={isFixesOpen()}
+          setFixesOpen={setIsFixesOpen}
+          fixes={displayedFixes()}
+          onFixAdd={handleFixAdd}
+          onFixRemove={handleFixRemove}
         >
           <SettingsDialog settings={settings} setSettings={setSettings} />
           <ShareButton
@@ -701,7 +771,7 @@ const App: Component = () => {
           <GeojsonPolySources sources={allSources} />
           <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} is3D={is3D} />
           <GeojsonPolyLayers displayStateStore={allStore} type="center" is3D={is3D} />
-          <AviationOverlayLayers overlays={overlays()} />
+          <AviationOverlayLayers overlays={overlays()} standaloneFixFeatures={standaloneFixFeatures()} />
         </MapGL>
         </div>
       </div>
