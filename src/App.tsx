@@ -1,5 +1,6 @@
 import { makePersisted } from '@solid-primitives/storage';
 import { Accessor, Component, createEffect, createMemo, createSignal, DEV, For, Setter, Show, untrack } from 'solid-js';
+import { Sequence } from '~/lib/types';
 import { DEFAULT_MAP_STYLE, DEFAULT_SETTINGS, DEFAULT_VIEWPORT } from '~/lib/defaults';
 import { Section, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui-core';
 import { MapStyleSelector } from '~/components/MapStyleSelector';
@@ -41,7 +42,11 @@ import { logIfDev } from '~/lib/dev';
 import { InfoPopup } from '~/components/InfoPopup';
 import { TopMenuBar } from '~/components/TopMenuBar';
 import { ProcedurePoints } from '~/components/ProcedurePoints';
+import { RoutePoints } from '~/components/RoutePoints';
 import { ShareButton } from '~/components/ShareButton';
+import { Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
+import { parseRoute } from '~/lib/routeParser';
+import { buildRoute } from '~/lib/routeBuilder';
 import {
   getURLStateParam,
   decodeStateFromURL,
@@ -169,7 +174,10 @@ const App: Component = () => {
   });
 
   const [displayedProcedures, setDisplayedProcedures] = createSignal<Procedure[]>([]);
+  const [routeProcedures, setRouteProcedures] = createSignal<RouteProcedureEntry[]>([]);
   const [isProceduresOpen, setIsProceduresOpen] = createSignal(false);
+  const [isRouteOpen, setIsRouteOpen] = createSignal(false);
+  const [displayedRoute, setDisplayedRoute] = createSignal<Route | null>(null);
   const [is3D, setIs3D] = createSignal(false);
 
   const toggle3D = () => {
@@ -224,20 +232,82 @@ const App: Component = () => {
     else setCursor('grab');
   });
 
+  const procedureKey = (p: Procedure) => `${p.kind}|${p.airport}|${p.identifier}`;
+
+  // Route-pushed SID/STAR is always filtered to the chosen path:
+  //   - per-runway entry / tail sequences (transition begins with RWn)
+  //   - the trunk (transition is empty/null or matches the procedure name)
+  //   - the chosen transition's sequence(s) — when one was filed
+  // Sibling transitions (other published exits / entries) are excluded so the
+  // map shows only the path the route actually takes. The full procedure is
+  // drawn only when the user explicitly toggles it via the Procedures sidebar.
+  const isRouteRelevantSequence = (
+    seq: Sequence,
+    procedureIdentifier: string,
+    chosenTransition: string | null,
+  ): boolean => {
+    const t = seq.transition;
+    // Trunk: empty/null, equals the procedure name, or 'ALL' — the API uses
+    // 'ALL' as the runway-common tail marker on STARs (and some SIDs) to
+    // indicate the path that applies regardless of runway/transition choice.
+    if (!t || t === '' || t === procedureIdentifier || t === 'ALL') return true;
+    if (/^RW\d/.test(t)) return true; // per-runway entry (SID) or runway tail (STAR)
+    return chosenTransition !== null && t === chosenTransition;
+  };
+
+  const filterProcedureForRoute = (entry: RouteProcedureEntry): Procedure => ({
+    ...entry.procedure,
+    sequences: entry.procedure.sequences.filter((s) =>
+      isRouteRelevantSequence(s, entry.procedure.identifier, entry.transition),
+    ),
+  });
+
+  // Combined render list:
+  //  - User-toggled procedures (always full).
+  //  - Route procedures, sequence-filtered to the chosen transition. Skipped
+  //    when the user has the same procedure toggled (full version wins so we
+  //    don't render duplicate Mapbox layer ids).
+  const combinedProcedures = createMemo(() => {
+    const userKeys = new Set(displayedProcedures().map(procedureKey));
+    const fromRoute = routeProcedures()
+      .filter((rp) => !userKeys.has(procedureKey(rp.procedure)))
+      .map(filterProcedureForRoute);
+    return [...displayedProcedures(), ...fromRoute];
+  });
+
   const handleProcedureToggle = (procedure: Procedure, isDisplayed: boolean) => {
+    const key = procedureKey(procedure);
     setDisplayedProcedures((prev) => {
       if (isDisplayed) {
+        if (prev.some((p) => procedureKey(p) === key)) return prev;
         return [...prev, procedure];
       }
-      return prev.filter(
-        (p) =>
-          !(
-            p.kind === procedure.kind &&
-            p.airport === procedure.airport &&
-            p.identifier === procedure.identifier
-          ),
-      );
+      return prev.filter((p) => procedureKey(p) !== key);
     });
+  };
+
+  const handleRouteSubmit = async (input: RouteInput) => {
+    console.log('[route] submit', input);
+    console.log('[route] parsed', parseRoute(input.raw).tokens);
+    try {
+      const route = await buildRoute(input);
+      console.log('[route] resolved', route);
+      setDisplayedRoute(route);
+
+      const entries: RouteProcedureEntry[] = [];
+      if (route.sidProcedure)
+        entries.push({ procedure: route.sidProcedure, transition: route.sidTransition });
+      if (route.starProcedure)
+        entries.push({ procedure: route.starProcedure, transition: route.starTransition });
+      setRouteProcedures(entries);
+    } catch (err) {
+      console.error('[route] build failed', err);
+    }
+  };
+
+  const handleRouteClear = () => {
+    setRouteProcedures([]);
+    setDisplayedRoute(null);
   };
 
   // Helper to create a persisted config signal that uses URL state if available
@@ -596,6 +666,11 @@ const App: Component = () => {
           proceduresOpen={isProceduresOpen()}
           setProceduresOpen={setIsProceduresOpen}
           onProcedureToggle={handleProcedureToggle}
+          routeOpen={isRouteOpen()}
+          setRouteOpen={setIsRouteOpen}
+          onRouteSubmit={handleRouteSubmit}
+          onRouteClear={handleRouteClear}
+          routeResult={displayedRoute()}
         >
           <SettingsDialog settings={settings} setSettings={setSettings} />
           <ShareButton
@@ -639,7 +714,8 @@ const App: Component = () => {
           <GeojsonPolySources sources={allSources} />
           <GeojsonPolyLayers displayStateStore={allStore} type="tracon" allPolys={TRACON_POLY_DEFINITIONS} is3D={is3D} />
           <GeojsonPolyLayers displayStateStore={allStore} type="center" is3D={is3D} />
-          <ProcedurePoints procedures={displayedProcedures()} />
+          <RoutePoints route={displayedRoute()} />
+          <ProcedurePoints procedures={combinedProcedures()} />
         </MapGL>
         </div>
       </div>

@@ -135,6 +135,12 @@ export const navdataUrl = (kind: ProcedureKind, airport: string) =>
 export const navdataAirportUrl = (airport: string) =>
   `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airports/${airport}`;
 
+export const navdataAirwayUrl = (identifier: string) =>
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/airways/${identifier}`;
+
+export const navdataPointUrl = (identifier: string) =>
+  `${NAVDATA_API_URL}/${NAVDATA_API_VERSION}/points/${identifier}`;
+
 export const MAP_STYLES: MapStyle[] = [
   DEFAULT_MAP_STYLE,
   {

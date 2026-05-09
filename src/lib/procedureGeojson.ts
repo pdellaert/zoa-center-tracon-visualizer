@@ -1,7 +1,7 @@
 import { FixDescription, LegType, Point, Procedure, ProcedureKind, Sequence } from '~/lib/types';
 
 const SID_SKIP_LEGTYPES: LegType[] = ['HeadingToAltitude', 'CourseToAltitude'];
-const ARROW_LEGTYPES: LegType[] = [
+export const ARROW_LEGTYPES: LegType[] = [
   'HeadingToManual',
   'CourseToManual',
   'FromFixToManual',
@@ -9,7 +9,7 @@ const ARROW_LEGTYPES: LegType[] = [
 ];
 const MISSED_APPROACH_STOPPERS: FixDescription[] = ['MissedApproach', 'MissedApproachFirstLeg'];
 
-const MANUAL_ARROW_DISTANCE_NM = 5;
+export const MANUAL_ARROW_DISTANCE_NM = 5;
 const ARROW_WING_LENGTH_NM = 0.6;
 const ARROW_WING_ANGLE_DEG = 30;
 const EARTH_RADIUS_NM = 3440.065;
@@ -41,14 +41,18 @@ export const formatFixLabel = (point: Point, kind: ProcedureKind): string => {
 };
 
 const hasCoords = (p: Point): p is Point & { latitude: number; longitude: number } =>
-  p.latitude != null && p.longitude != null;
+  p.latitude != null &&
+  p.longitude != null &&
+  Number.isFinite(p.latitude) &&
+  Number.isFinite(p.longitude) &&
+  !(p.latitude === 0 && p.longitude === 0);
 
 const isMissedApproachBoundary = (point: Point): boolean =>
   point.descriptions.some((d) => MISSED_APPROACH_STOPPERS.includes(d));
 
 const isRunwayThreshold = (point: Point): boolean => point.descriptions.includes('RunwayHelipad');
 
-const destinationPoint = (lat: number, lon: number, bearingDeg: number, distanceNM: number) => {
+export const destinationPoint = (lat: number, lon: number, bearingDeg: number, distanceNM: number) => {
   const angular = distanceNM / EARTH_RADIUS_NM;
   const bearing = (bearingDeg * Math.PI) / 180;
   const lat1 = (lat * Math.PI) / 180;
@@ -65,7 +69,7 @@ const destinationPoint = (lat: number, lon: number, bearingDeg: number, distance
   return { latitude: (lat2 * 180) / Math.PI, longitude: (lon2 * 180) / Math.PI };
 };
 
-const bearingBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+export const bearingBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -74,7 +78,7 @@ const bearingBetween = (lat1: number, lon1: number, lat2: number, lon2: number):
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 };
 
-const distanceBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+export const distanceBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
   const dPhi = ((lat2 - lat1) * Math.PI) / 180;
@@ -102,7 +106,7 @@ const interpolateBearing = (from: number, to: number, t: number): number => {
 // works against geographic north, so any magnetic-domain input (point.course
 // from the API, runway-designator-derived headings) must be converted before
 // being plotted. variation > 0 = easterly.
-const toTrue = (magneticDeg: number, correction: number): number =>
+export const toTrue = (magneticDeg: number, correction: number): number =>
   (magneticDeg + correction + 360) % 360;
 
 /**
