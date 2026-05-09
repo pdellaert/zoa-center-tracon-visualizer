@@ -7,11 +7,6 @@ import {
 } from '~/lib/mapGeometry';
 import { Route, RouteFix } from '~/lib/routeTypes';
 
-/**
- * Total great-circle nautical miles across every segment of the route.
- * Direct legs use a single from→to haversine; airway legs sum the haversine
- * between consecutive fixes (close enough — airway hops are short).
- */
 export const routeTotalNm = (route: Route): number => {
   let total = 0;
   for (const seg of route.segments) {
@@ -39,9 +34,8 @@ export interface RouteGeometry {
 export const buildRouteGeometry = (route: Route): RouteGeometry => {
   const lineSegments: LineSegment[] = [];
   const fixById = new Map<string, RouteFix>();
-  // SID exit / STAR entry fixes are already labeled by the procedure renderer
-  // (the SID/STAR sequences pushed into displayedProcedures cover them).
-  // Excluding them here avoids double-labeling at the same coordinate.
+  // SID exit / STAR entry fixes are labeled by the procedure renderer; exclude
+  // them here so we don't double-label at the same coordinate.
   const excludeIds = new Set<string>();
   if (route.sidExitFix) excludeIds.add(route.sidExitFix.identifier);
   if (route.starEntryFix) excludeIds.add(route.starEntryFix.identifier);
@@ -61,8 +55,6 @@ export const buildRouteGeometry = (route: Route): RouteGeometry => {
 
   for (const segment of route.segments) {
     if (segment.kind === 'direct') {
-      // Drop the segment entirely if either endpoint has missing/sentinel
-      // coords — better to skip than to draw a line through (0, 0).
       if (!isValidCoord(segment.from.lat, segment.from.lon)) continue;
       if (!isValidCoord(segment.to.lat, segment.to.lon)) continue;
       lineSegments.push({
@@ -72,9 +64,8 @@ export const buildRouteGeometry = (route: Route): RouteGeometry => {
       addFix(segment.from);
       addFix(segment.to);
     } else {
-      // Airway hops are typically short and densely sampled by intermediate
-      // fixes already, so straight segments between consecutive fixes are a
-      // close-enough approximation to the great-circle path.
+      // Airway hops are densely sampled by intermediate fixes, so straight
+      // segments between consecutive fixes approximate the great circle well.
       const validFixes = segment.fixes.filter((f) => isValidCoord(f.lat, f.lon));
       if (validFixes.length < 2) continue;
       lineSegments.push({

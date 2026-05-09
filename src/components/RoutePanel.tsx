@@ -65,7 +65,7 @@ export const RoutePanel: Component<RoutePanelProps> = (props) => {
       <div class="flex flex-col">
         <label class="text-slate-300 text-xs mb-1">Route</label>
         <textarea
-          rows="3"
+          rows={3}
           value={raw()}
           onInput={(e) => setRaw(e.currentTarget.value)}
           placeholder="MOD3.LIN OAL J88 BOI ABC.PIRAT3"

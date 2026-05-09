@@ -46,6 +46,7 @@ import { Route, RouteInput, RouteProcedureEntry } from '~/lib/routeTypes';
 import { buildRoute } from '~/lib/routeBuilder';
 import { procedureKey } from '~/lib/procedureGeojson';
 import { buildProcedureOverlays, buildRouteOverlay, filterProcedureForRoute, Overlay } from '~/lib/overlay';
+import { runIfDev } from '~/lib/dev';
 import {
   getURLStateParam,
   decodeStateFromURL,
@@ -231,27 +232,18 @@ const App: Component = () => {
     else setCursor('grab');
   });
 
-  // Filter route-pushed procedures separately so we don't redo this work when
-  // only `displayedProcedures` changes (e.g., user toggles a sidebar SID). The
-  // overlay cache hits on identical (procedure, transition) pairs across
-  // unrelated state ticks.
-  const filteredRouteProcs = createMemo(() =>
-    routeProcedures().map((entry) => filterProcedureForRoute(entry.procedure, entry.transition)),
-  );
-
-  // Single overlay list passed to AviationOverlayLayers. Stack order is
-  // bottom-to-top (Mapbox adds layers in mount order; later wins):
-  //   1. Route line overlay (rendered behind everything else).
-  //   2. Route-pushed SID/STAR procedure overlays, sequence-filtered to the
-  //      chosen transition. Dropped when the user has the same procedure
-  //      toggled in the sidebar (full version wins to avoid duplicate
-  //      Mapbox source ids).
-  //   3. User-toggled procedure overlays (always full, on top).
+  // Stack order (Mapbox adds in mount order; later paints on top):
+  //   1. Route line overlay (bottom).
+  //   2. Route-pushed SID/STAR overlays, sequence-filtered to the transition.
+  //      Skipped when the user has the same procedure toggled in the sidebar
+  //      (full version wins; avoids duplicate Mapbox source ids).
+  //   3. User-toggled procedures, full (top).
   const overlays = createMemo<Overlay[]>(() => {
     const userProcs = displayedProcedures();
     const userKeys = new Set(userProcs.map(procedureKey));
     const userOverlays = userProcs.flatMap(buildProcedureOverlays);
-    const routeProcOverlays = filteredRouteProcs()
+    const routeProcOverlays = routeProcedures()
+      .map((entry) => filterProcedureForRoute(entry.procedure, entry.transition))
       .filter((p) => !userKeys.has(procedureKey(p)))
       .flatMap(buildProcedureOverlays);
     const route = displayedRoute();
@@ -271,16 +263,15 @@ const App: Component = () => {
   };
 
   // Epoch counter discards stale results when the user submits a new route
-  // before the previous one finished resolving. Without this, an earlier
-  // (slower) buildRoute can clobber a later (faster) one.
+  // before the previous one finished resolving.
   let routeSubmitEpoch = 0;
   const handleRouteSubmit = async (input: RouteInput) => {
     const myEpoch = ++routeSubmitEpoch;
-    if (import.meta.env.DEV) console.log('[route] submit', input);
+    runIfDev(() => console.log('[route] submit', input));
     try {
       const route = await buildRoute(input);
       if (myEpoch !== routeSubmitEpoch) return;
-      if (import.meta.env.DEV) console.log('[route] resolved', route);
+      runIfDev(() => console.log('[route] resolved', route));
 
       const entries: RouteProcedureEntry[] = [];
       if (route.sidProcedure)
@@ -288,11 +279,9 @@ const App: Component = () => {
       if (route.starProcedure)
         entries.push({ procedure: route.starProcedure, transition: route.starTransition });
 
-      // Zap the previous route state before applying the new one. This forces
-      // the procedure-fix-source / route-fix-source to unmount and remount
-      // with fresh data; setData alone doesn't reliably refresh Mapbox's
-      // symbol-layer text rendering when only the source data changes between
-      // back-to-back route submissions.
+      // Zap previous route state before applying the new one to force the fix
+      // sources to unmount and remount; setData alone doesn't reliably refresh
+      // Mapbox symbol-layer text on back-to-back submissions.
       setRouteProcedures([]);
       setDisplayedRoute(null);
       setDisplayedRoute(route);

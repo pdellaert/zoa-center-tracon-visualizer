@@ -1,4 +1,5 @@
 import { fetchAirportInfo } from '~/lib/procedureApi';
+import { coordPair } from '~/lib/mapGeometry';
 import { parseRoute, ClassifiedToken } from '~/lib/routeParser';
 import {
   findSidByName,
@@ -23,14 +24,31 @@ import {
 } from '~/lib/routeTypes';
 
 interface HeadDecision {
-  consumedTokens: number; // 0, 1, or 2
+  consumedTokens: 0 | 1 | 2;
   sidInput: SidStarInput | null;
 }
 
 interface TailDecision {
-  consumedTokens: number; // 0, 1, or 2
+  consumedTokens: 0 | 1 | 2;
   starInput: SidStarInput | null;
 }
+
+const airportFix = (identifier: string, coord: Coord): RouteFix => ({
+  identifier,
+  lat: coord.lat,
+  lon: coord.lon,
+  label: identifier,
+});
+
+const headTokenStr = (tokens: ClassifiedToken[], head: HeadDecision): string =>
+  head.consumedTokens === 2 ? `${tokens[0].raw} ${tokens[1].raw}` : tokens[0].raw;
+
+const tailTokenStr = (tokens: ClassifiedToken[], tail: TailDecision): string => {
+  const lastIdx = tokens.length - 1;
+  return tail.consumedTokens === 2
+    ? `${tokens[lastIdx - 1].raw} ${tokens[lastIdx].raw}`
+    : tokens[lastIdx].raw;
+};
 
 const detectHead = async (tokens: ClassifiedToken[], departure: string): Promise<HeadDecision> => {
   if (tokens.length === 0) return { consumedTokens: 0, sidInput: null };
@@ -39,7 +57,6 @@ const detectHead = async (tokens: ClassifiedToken[], departure: string): Promise
     const [name, transition] = first.raw.split('.');
     return { consumedTokens: 1, sidInput: { name, transition: transition || null } };
   }
-  // No dot — try to fuse against the airport's published SIDs.
   const sid = await findSidByName(departure, first.raw);
   if (!sid) return { consumedTokens: 0, sidInput: null };
   if (tokens.length >= 2 && procedureHasTransition(sid, tokens[1].raw)) {
@@ -58,8 +75,8 @@ const detectTail = async (
   }
   const last = tokens[tokens.length - 1];
   if (last.raw.includes('.')) {
-    const parts = last.raw.split('.');
     // STAR convention: <transition>.<STAR>
+    const parts = last.raw.split('.');
     return {
       consumedTokens: 1,
       starInput: { name: parts[1] || parts[0], transition: parts[1] ? parts[0] : null },
@@ -68,13 +85,11 @@ const detectTail = async (
   const star = await findStarByName(destination, last.raw);
   if (!star) return { consumedTokens: 0, starInput: null };
   const prevIdx = tokens.length - 2;
-  // Allow the tail to share its boundary token with the head: when a single
-  // fix is published as a transition under BOTH the SID (head) and the STAR
-  // (tail) — e.g., the ORRCA fix in `TRUKN2 ORRCA ORRCA1` — the head greedy-
-  // consumes it as the SID exit, but the tail still wants it as the STAR
-  // entry. Letting prevIdx == reservedHead - 1 means the tail "co-owns" that
-  // token: the body slice will be empty rather than negative, the SID exit
-  // and STAR entry land at the same coord, and the route renders cleanly.
+  // Allow head and tail to co-own the boundary token: a fix published as a
+  // transition under BOTH the SID and STAR (e.g. ORRCA in `TRUKN2 ORRCA
+  // ORRCA1`). Without this, the head greedy-consumes ORRCA and the tail can't
+  // see it. With prevIdx == reservedHead - 1, the body slice clamps to empty
+  // and SID exit / STAR entry land at the same coord.
   if (prevIdx >= reservedHead - 1 && procedureHasTransition(star, tokens[prevIdx].raw)) {
     return {
       consumedTokens: 2,
@@ -90,15 +105,16 @@ const resolveBodyToken = async (
 ): Promise<RouteFix | null> => {
   if (tok.type === 'latlon') return latLonTokenToFix(tok.raw);
   if (tok.type === 'frd') return parseFixRadialDistance(tok.raw, anchor);
-  // Treat 'fix' and 'airway' (when used as a fix) the same way — both are
-  // identifier lookups. The airway-vs-fix distinction matters only when the
-  // token is being interpreted as an airway between two surrounding fixes.
   return resolveFix(tok.raw, anchor);
 };
 
 export const buildRoute = async (input: RouteInput): Promise<Route> => {
   const errors: RouteError[] = [];
 
+  // Kick off all four fetches in parallel. The airport-info cache makes the
+  // fetchAirportInfo calls inside loadAirportProcedures (via prefetch*) free.
+  const depPrefetchP = prefetchDepartures(input.departure);
+  const destPrefetchP = prefetchArrivals(input.destination);
   const [depResult, destResult] = await Promise.allSettled([
     fetchAirportInfo(input.departure),
     fetchAirportInfo(input.destination),
@@ -106,35 +122,16 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
   const depInfo = depResult.status === 'fulfilled' ? depResult.value : null;
   const destInfo = destResult.status === 'fulfilled' ? destResult.value : null;
   if (depResult.status === 'rejected') {
-    errors.push({
-      token: input.departure,
-      reason: 'Could not fetch departure airport info',
-    });
+    errors.push({ token: input.departure, reason: 'Could not fetch departure airport info' });
   }
   if (destResult.status === 'rejected') {
-    errors.push({
-      token: input.destination,
-      reason: 'Could not fetch destination airport info',
-    });
+    errors.push({ token: input.destination, reason: 'Could not fetch destination airport info' });
   }
+  await Promise.allSettled([depPrefetchP, destPrefetchP]);
 
-  // Best-effort prefetch — not fatal if missing (errors will surface later).
-  await Promise.allSettled([
-    prefetchDepartures(input.departure),
-    prefetchArrivals(input.destination),
-  ]);
+  const departureCoord = depInfo ? coordPair(depInfo) : null;
+  const destinationCoord = destInfo ? coordPair(destInfo) : null;
 
-  const departureCoord: Coord | null =
-    depInfo && depInfo.latitude !== null && depInfo.longitude !== null
-      ? { lat: depInfo.latitude, lon: depInfo.longitude }
-      : null;
-  const destinationCoord: Coord | null =
-    destInfo && destInfo.latitude !== null && destInfo.longitude !== null
-      ? { lat: destInfo.latitude, lon: destInfo.longitude }
-      : null;
-
-  // Empty-route fast path: when the user provides only departure + destination
-  // (no fixes, no SID/STAR), draw a single direct line between the two airports.
   if (input.raw.trim() === '' && departureCoord && destinationCoord) {
     return {
       departure: input.departure,
@@ -143,18 +140,8 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       segments: [
         {
           kind: 'direct',
-          from: {
-            identifier: input.departure,
-            lat: departureCoord.lat,
-            lon: departureCoord.lon,
-            label: input.departure,
-          },
-          to: {
-            identifier: input.destination,
-            lat: destinationCoord.lat,
-            lon: destinationCoord.lon,
-            label: input.destination,
-          },
+          from: airportFix(input.departure, departureCoord),
+          to: airportFix(input.destination, destinationCoord),
         },
       ],
       sidProcedure: null,
@@ -172,41 +159,35 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
   const head = await detectHead(tokens, input.departure);
   const tail = await detectTail(tokens, input.destination, head.consumedTokens);
 
-  // When head and tail co-own a boundary token (see detectTail), the slice
-  // bounds invert by one — clamp to an empty slice instead of letting
-  // Array.prototype.slice produce surprising results.
   const bodyStart = head.consumedTokens;
+  // Clamp to empty when head/tail co-own the boundary token (see detectTail).
   const bodyEnd = Math.max(bodyStart, tokens.length - tail.consumedTokens);
   const bodyTokens = tokens.slice(bodyStart, bodyEnd);
 
-  // Resolve SID first so its exit fix can anchor the body.
   let sidProcedure: Route['sidProcedure'] = null;
   let sidTransition: string | null = null;
   let sidExitFix: RouteFix | null = null;
   let lastFix: RouteFix | null = null;
   let anchor: Coord | null = departureCoord;
-  // When the SID's chosen transition ends in a vector (manual-termination
-  // arrow), the FIRST segment we emit after the SID should be dashed and
-  // begin at the arrow tip — that's the implicit ATC vector handoff.
+  // True when the chosen SID transition ends in a vector (manual-termination
+  // arrow): the FIRST post-SID segment renders dashed and starts at the arrow
+  // tip, representing the implicit ATC vector hand-off.
   let nextSegmentDashed = false;
 
   if (head.sidInput) {
     const resolved = await resolveSidStar(head.sidInput, 'sid', input.departure);
     if (!resolved) {
-      const tokenStr = head.consumedTokens === 2
-        ? `${tokens[0].raw} ${tokens[1].raw}`
-        : tokens[0].raw;
-      errors.push({ token: tokenStr, reason: `SID "${head.sidInput.name}" not found at ${input.departure}` });
+      errors.push({
+        token: headTokenStr(tokens, head),
+        reason: `SID "${head.sidInput.name}" not found at ${input.departure}`,
+      });
     } else {
       sidProcedure = resolved.procedure;
       sidTransition = resolved.transition;
       sidExitFix = resolved.connectingFix;
       if (resolved.transitionFallback && head.sidInput.transition) {
-        const tokenStr = head.consumedTokens === 2
-          ? `${tokens[0].raw} ${tokens[1].raw}`
-          : tokens[0].raw;
         errors.push({
-          token: tokenStr,
+          token: headTokenStr(tokens, head),
           reason: `Transition "${head.sidInput.transition}" not published for ${head.sidInput.name} — using trunk`,
         });
       }
@@ -215,32 +196,18 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
         anchor = { lat: resolved.connectingFix.lat, lon: resolved.connectingFix.lon };
         nextSegmentDashed = resolved.endsWithVector;
       } else {
-        // Radar-vectors-only SID (SFO4, GAPP7, OAK6 …): the procedure exists
-        // but has no published exit fix. The SID still draws via its runway
-        // sequences; we'll bridge from the departure airport (dep-airport
-        // fallback below) to the first filed fix with a dashed segment to
-        // represent the ATC vector hand-off.
+        // Radar-vectors-only SID (SFO4, GAPP7, OAK6 …): no published exit fix.
+        // The dep-airport seed below + dashed flag bridges to the first fix.
         nextSegmentDashed = true;
       }
     }
   }
 
-  // Seed the en-route line at the departure airport whenever no SID exit
-  // fix is available — covers both "no SID filed" and "SID found but
-  // exit-fix unknown" (radar-vectors).
   if (!lastFix && departureCoord) {
-    lastFix = {
-      identifier: input.departure,
-      lat: departureCoord.lat,
-      lon: departureCoord.lon,
-      label: input.departure,
-    };
+    lastFix = airportFix(input.departure, departureCoord);
     anchor = departureCoord;
   }
 
-  // Body iteration. Each token's resolution is wrapped so a transient failure
-  // (5xx on a fix lookup, parse error, etc.) doesn't abort the whole route —
-  // the bad token is recorded in `errors[]` and we move on.
   const segments: RouteSegment[] = [];
   let i = 0;
   while (i < bodyTokens.length) {
@@ -258,12 +225,10 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
         i += 1;
         continue;
       }
-      // Determine the airway's terminal fix identifier. Normally this is the
-      // next body token (a fix). But when the airway sits at the very end of
-      // the body and the tail STAR has a transition, that transition fix has
-      // been swallowed by the tail-fusion step — use its identifier instead.
-      // (Example: `... B453 MDO WITTI5` where MDO is both the airway's
-      // endpoint and the STAR's entry transition.)
+      // The airway terminates at the next body token, OR — if the airway sits
+      // at the body's tail — at the STAR's transition fix (already swallowed
+      // by tail-fusion). E.g. `... B453 MDO WITTI5` where MDO is both the
+      // airway endpoint and the STAR's entry transition.
       const next = bodyTokens[i + 1];
       let terminalId: string | null = null;
       let consumed = 2;
@@ -271,7 +236,7 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
         terminalId = next.raw;
       } else if (i === bodyTokens.length - 1 && tail.starInput?.transition) {
         terminalId = tail.starInput.transition;
-        consumed = 1; // the STAR transition fix isn't part of the body
+        consumed = 1;
       }
       if (!terminalId) {
         errors.push({ token: tok.raw, reason: 'Airway needs a following fix' });
@@ -280,8 +245,7 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       }
       const slice = await resolveAirwaySegment(tok.raw, lastFix.identifier, terminalId);
       if (!slice) {
-        // Recovery 1: maybe the "airway" token is actually a 5-character fix
-        // (e.g., V52). If it resolves as a fix, treat it as one.
+        // Recovery 1: the "airway" token may actually be a fix (e.g., V52).
         const asFix = await resolveBodyToken({ ...tok, type: 'fix' }, anchor);
         if (asFix) {
           if (lastFix)
@@ -292,11 +256,9 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
           i += 1;
           continue;
         }
-        // Recovery 2: airway exists, but the navdata response doesn't include
-        // both endpoints (common where airways cross national boundaries —
-        // e.g., J523 ends at CFSKH and the data omits the rest into Canada).
-        // Resolve the terminal fix as a standalone point and draw a direct
-        // line so the route stays connected; surface a warning.
+        // Recovery 2: airway exists but the response omits both endpoints
+        // (common across borders — J523 ends at CFSKH, data omits the rest
+        // into Canada). Draw a direct to keep the route connected; warn.
         const fromIdentifier = lastFix.identifier;
         const terminalFix = await resolveFix(terminalId, anchor);
         if (terminalFix) {
@@ -328,8 +290,6 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
         identifier: slice.airwayIdentifier,
         fixes: slice.fixes,
       });
-      // Reset dashed flag once we've crossed an airway boundary; the vector
-      // hand-off only applies to the very first post-SID hop.
       nextSegmentDashed = false;
       lastFix = slice.fixes[slice.fixes.length - 1];
       anchor = { lat: lastFix.lat, lon: lastFix.lon };
@@ -337,7 +297,6 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       continue;
     }
 
-    // 'fix', 'latlon', 'frd'
     const fix = await resolveBodyToken(tok, anchor);
     if (!fix) {
       errors.push({ token: tok.raw, reason: `Could not resolve ${tok.type}` });
@@ -359,19 +318,14 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
     }
   }
 
-  // Resolve STAR at the tail
   let starProcedure: Route['starProcedure'] = null;
   let starTransition: string | null = null;
   let starEntryFix: RouteFix | null = null;
   if (tail.starInput) {
     const resolved = await resolveSidStar(tail.starInput, 'star', input.destination);
     if (!resolved) {
-      const lastIdx = tokens.length - 1;
-      const tokenStr = tail.consumedTokens === 2
-        ? `${tokens[lastIdx - 1].raw} ${tokens[lastIdx].raw}`
-        : tokens[lastIdx].raw;
       errors.push({
-        token: tokenStr,
+        token: tailTokenStr(tokens, tail),
         reason: `STAR "${tail.starInput.name}" not found at ${input.destination}`,
       });
     } else {
@@ -379,12 +333,8 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
       starTransition = resolved.transition;
       starEntryFix = resolved.connectingFix;
       if (resolved.transitionFallback && tail.starInput.transition) {
-        const lastIdx = tokens.length - 1;
-        const tokenStr = tail.consumedTokens === 2
-          ? `${tokens[lastIdx - 1].raw} ${tokens[lastIdx].raw}`
-          : tokens[lastIdx].raw;
         errors.push({
-          token: tokenStr,
+          token: tailTokenStr(tokens, tail),
           reason: `Transition "${tail.starInput.transition}" not published for ${tail.starInput.name} — using trunk`,
         });
       }
@@ -404,18 +354,15 @@ export const buildRoute = async (input: RouteInput): Promise<Route> => {
     }
   }
 
-  // Final leg: when no STAR is in play, the en-route line should land at the
-  // destination airport itself rather than dangling at the last filed fix.
-  // (When a STAR is present, its own runway-tail sequences carry the path to
-  // the runway, so adding a redundant straight line would draw under it.)
+  // No STAR: land the en-route line at the destination airport so it doesn't
+  // dangle at the last filed fix. With a STAR, its runway-tail handles this.
   if (!starProcedure && lastFix && destinationCoord) {
-    const airportFix: RouteFix = {
-      identifier: input.destination,
-      lat: destinationCoord.lat,
-      lon: destinationCoord.lon,
-      label: input.destination,
-    };
-    segments.push({ kind: 'direct', from: lastFix, to: airportFix, dashed: nextSegmentDashed });
+    segments.push({
+      kind: 'direct',
+      from: lastFix,
+      to: airportFix(input.destination, destinationCoord),
+      dashed: nextSegmentDashed,
+    });
     nextSegmentDashed = false;
   }
 

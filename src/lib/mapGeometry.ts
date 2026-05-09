@@ -1,8 +1,3 @@
-// Shared geometry primitives used by both the Procedures and Routes pipelines.
-// The split is: this file owns the math + the GeoJSON feature shapes; pipeline-
-// specific renderers (procedureGeojson, routeGeojson) own the higher-level
-// "build me geometry from a Procedure / Route" functions.
-
 import { LegType } from '~/lib/types';
 
 export const EARTH_RADIUS_NM = 3440.065;
@@ -19,13 +14,8 @@ export const ARROW_LEGTYPES: LegType[] = [
   'ManualTermination',
 ];
 
-///////////////////////////////////////////////////
-// Coord validity
-///////////////////////////////////////////////////
-// A fix with both lat and lon equal to zero is the navdata API's sentinel for
-// "coordinates unknown" — those points sit on the equator at Greenwich, which
-// is never where a real navaid lives in this dataset. Treat such results as
-// missing rather than rendering a line to (0, 0).
+// (0, 0) is the navdata API's "coordinates unknown" sentinel — Greenwich/Equator
+// is never a real navaid. Treat it as missing rather than rendering to it.
 export const isValidCoord = (
   lat: number | null | undefined,
   lon: number | null | undefined,
@@ -36,19 +26,12 @@ export const isValidCoord = (
   Number.isFinite(lon) &&
   !(lat === 0 && lon === 0);
 
-// Companion to isValidCoord: returns the narrowed numeric pair when valid,
-// null otherwise. Use at sites that need to extract lat/lon without the
-// `as number` cast TS demands after a multi-arg boolean predicate.
 export const coordPair = (
   p: { latitude: number | null | undefined; longitude: number | null | undefined },
 ): { lat: number; lon: number } | null => {
   if (!isValidCoord(p.latitude, p.longitude)) return null;
   return { lat: p.latitude as number, lon: p.longitude as number };
 };
-
-///////////////////////////////////////////////////
-// Spherical math
-///////////////////////////////////////////////////
 
 export const destinationPoint = (
   lat: number,
@@ -90,10 +73,8 @@ export const distanceBetween = (lat1: number, lon1: number, lat2: number, lon2: 
   return 2 * EARTH_RADIUS_NM * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-// Magnetic→true conversion. The geometry layer (destinationPoint, bearingBetween)
-// works against geographic north, so any magnetic-domain input (point.course
-// from the API, runway-designator-derived headings) must be converted before
-// being plotted. variation > 0 = easterly.
+// destinationPoint/bearingBetween work in true (geographic) bearings; navdata
+// emits magnetic bearings. variation > 0 = easterly.
 export const toTrue = (magneticDeg: number, correction: number): number =>
   (magneticDeg + correction + 360) % 360;
 
@@ -105,12 +86,8 @@ export const interpolateBearing = (from: number, to: number, t: number): number 
   return (from + diff * t + 360) % 360;
 };
 
-///////////////////////////////////////////////////
-// Runway / manual-termination geometry
-///////////////////////////////////////////////////
-
-// Parse a SID/STAR runway-transition designator (e.g. "RW28R") into a
-// magnetic heading in degrees. Returns null for non-runway transitions.
+// Parse a SID/STAR runway-transition designator (e.g. "RW28R") into a magnetic
+// heading in degrees. Returns null for non-runway transitions.
 export const runwayHeading = (transition?: string | null): number | null => {
   if (!transition) return null;
   const m = transition.match(/^RW(\d{1,2})/);
@@ -118,12 +95,7 @@ export const runwayHeading = (transition?: string | null): number | null => {
   return (parseInt(m[1], 10) * 10) % 360;
 };
 
-/**
- * Generate arc points that smoothly transition from rwyHeading to courseHeading
- * over arcDist NM, starting at the given position. Returns the arc coords
- * (excluding the start) and the final position. Both heading inputs must be
- * in the same domain (both true OR both magnetic — caller's choice).
- */
+// Both heading inputs must share a domain (both true OR both magnetic).
 export const generateArcPoints = (
   start: { latitude: number; longitude: number },
   rwyHeading: number,
@@ -145,27 +117,14 @@ export const generateArcPoints = (
 export interface ManualLegTip {
   prev: { latitude: number; longitude: number };
   tip: { latitude: number; longitude: number };
-  // Arc coords (excluding the start) when the leg comes off a steep runway
-  // course and needs smoothing; null otherwise. The renderer splices these
-  // into the line; the route resolver only needs `tip`.
   arc: { coords: [number, number][]; end: { latitude: number; longitude: number } } | null;
   courseTrue: number;
 }
 
-/**
- * Compute the rendered arrow tip for a manual-termination (vector) leg. Used
- * by both the procedure renderer (to draw the arrow + arc) and the route
- * resolver (to find where the en-route line attaches). Single source of
- * truth so the two never diverge.
- *
- *   - prev: coord the leg starts from. When the leg is the FIRST leg off a
- *     runway origin, pass the runway threshold here AND pass the sequence's
- *     transition (e.g. "RW28R") as runwayTransition; arc smoothing kicks in
- *     when the angle from runway heading to course exceeds ARC_THRESHOLD_DEG.
- *   - courseMag: the manual leg's published magnetic course.
- *   - magneticCorrection: variation to apply via toTrue.
- *   - runwayTransition: see above; pass null for non-first legs.
- */
+// Single source of truth for manual-termination (vector) leg tip math, shared
+// by procedure renderer and route resolver. When the leg is the FIRST off a
+// runway origin, pass the threshold as `prev` AND the runway transition (e.g.
+// "RW28R") so arc-smoothing kicks in for steep departure courses.
 export const manualLegTip = (
   prev: { latitude: number; longitude: number },
   courseMag: number,
@@ -174,8 +133,7 @@ export const manualLegTip = (
 ): ManualLegTip => {
   const courseTrue = toTrue(courseMag, magneticCorrection);
   const rwyHdgMag = runwayTransition ? runwayHeading(runwayTransition) : null;
-  // Threshold comparison stays in magnetic — both operands magnetic, so the
-  // constant correction cancels in angleDifference.
+  // Magnetic-vs-magnetic: the constant correction cancels in angleDifference.
   const needsArc =
     rwyHdgMag !== null && angleDifference(rwyHdgMag, courseMag) > ARC_THRESHOLD_DEG;
 
@@ -197,20 +155,10 @@ export const manualLegTip = (
   return { prev, tip, arc, courseTrue };
 };
 
-/**
- * Interpolate a great-circle path between two lat/lons using slerp on unit
- * vectors. Mapbox renders LineStrings by projecting each vertex to screen
- * coords and connecting them with straight pixel lines, so a 2-point direct
- * leg on a Mercator map appears as a rhumb line — visibly wrong for any
- * leg over a few hundred miles. Returning enough vertices makes the line
- * follow the actual great circle on screen.
- *
- * Step density adapts to distance (≈50 NM per segment, capped at 128 steps)
- * so short legs stay cheap.
- *
- * Longitudes are kept continuous past ±180° if the path crosses the
- * antimeridian — Mapbox wraps them back into view automatically.
- */
+// Mapbox draws LineStrings as straight pixel lines between projected vertices,
+// so a 2-point direct over hundreds of miles renders as a rhumb line. Returning
+// densely-sampled great-circle vertices makes it follow the actual sphere.
+// Antimeridian: longitudes are kept continuous past ±180°; Mapbox wraps them.
 export const greatCircleCoords = (
   fromLat: number,
   fromLon: number,
@@ -254,7 +202,6 @@ export const greatCircleCoords = (
     const z = f * z1 + g * z2;
     const lat = (Math.atan2(z, Math.sqrt(x * x + y * y)) * 180) / Math.PI;
     let lon = (Math.atan2(y, x) * 180) / Math.PI;
-    // Keep longitudes continuous across the antimeridian.
     if (prevLon !== null) {
       while (lon - prevLon > 180) lon -= 360;
       while (lon - prevLon < -180) lon += 360;
@@ -264,10 +211,6 @@ export const greatCircleCoords = (
   }
   return coords;
 };
-
-///////////////////////////////////////////////////
-// GeoJSON feature shapes
-///////////////////////////////////////////////////
 
 export interface FixFeature {
   type: 'Feature';

@@ -1,20 +1,21 @@
 import { isValidNavdataIdentifier, navdataAirportUrl, navdataUrl } from '~/lib/config';
+import { isValidCoord } from '~/lib/mapGeometry';
 import { AirportInfo, Procedure, ProcedureKind } from '~/lib/types';
 
-// Per-airport pack of all three procedure kinds, with annotations applied
-// (SID runwayOrigin + per-procedure magneticCorrection). Shared by the
-// Procedures sidebar and the Route resolver so both code paths see the same
-// annotated objects and the four navdata endpoints are hit at most once.
 export interface AirportProcedurePack {
   sids: Procedure[];
   stars: Procedure[];
   apps: Procedure[];
 }
 
+const RUNWAY_RE = /^RW(\d{1,2})([A-Z]?)$/;
+
 const airportProceduresCache = new Map<string, Promise<AirportProcedurePack>>();
+const airportInfoCache = new Map<string, Promise<AirportInfo | null>>();
 
 export const clearProcedureCache = () => {
   airportProceduresCache.clear();
+  airportInfoCache.clear();
 };
 
 interface RawProcedureResponse {
@@ -46,25 +47,26 @@ export const fetchProcedures = async (kind: ProcedureKind, airport: string): Pro
   }));
 };
 
-export const fetchAirportInfo = async (airport: string): Promise<AirportInfo | null> => {
-  if (!isValidNavdataIdentifier(airport)) return null;
-  const response = await fetch(navdataAirportUrl(airport));
-  if (!response.ok) return null;
-  const raw = await response.json();
-  return {
-    identifier: typeof raw.identifier === 'string' ? raw.identifier : airport,
-    variation: typeof raw.variation === 'number' ? raw.variation : null,
-    courseType: typeof raw.courseType === 'string' ? raw.courseType : null,
-    latitude: typeof raw.latitude === 'number' ? raw.latitude : null,
-    longitude: typeof raw.longitude === 'number' ? raw.longitude : null,
-  };
+export const fetchAirportInfo = (airport: string): Promise<AirportInfo | null> => {
+  const cached = airportInfoCache.get(airport);
+  if (cached) return cached;
+  const promise = (async (): Promise<AirportInfo | null> => {
+    if (!isValidNavdataIdentifier(airport)) return null;
+    const response = await fetch(navdataAirportUrl(airport));
+    if (!response.ok) return null;
+    const raw = await response.json();
+    return {
+      identifier: typeof raw.identifier === 'string' ? raw.identifier : airport,
+      variation: typeof raw.variation === 'number' ? raw.variation : null,
+      courseType: typeof raw.courseType === 'string' ? raw.courseType : null,
+      latitude: typeof raw.latitude === 'number' ? raw.latitude : null,
+      longitude: typeof raw.longitude === 'number' ? raw.longitude : null,
+    };
+  })();
+  promise.catch(() => airportInfoCache.delete(airport));
+  airportInfoCache.set(airport, promise);
+  return promise;
 };
-
-///////////////////////////////////////////////////
-// Runway annotation helpers (used by both the Procedures sidebar and the
-// Route feature so that SID sequences anchor at the proper departure-end
-// runway threshold even when fetched from different code paths).
-///////////////////////////////////////////////////
 
 export const runwayCoordsFromApproaches = (
   approaches: Procedure[],
@@ -75,12 +77,14 @@ export const runwayCoordsFromApproaches = (
       for (const point of sequence.points) {
         if (
           point.identifier &&
-          point.latitude != null &&
-          point.longitude != null &&
+          isValidCoord(point.latitude, point.longitude) &&
           point.descriptions.includes('RunwayHelipad') &&
           !map.has(point.identifier)
         ) {
-          map.set(point.identifier, { latitude: point.latitude, longitude: point.longitude });
+          map.set(point.identifier, {
+            latitude: point.latitude as number,
+            longitude: point.longitude as number,
+          });
         }
       }
     }
@@ -104,7 +108,7 @@ const flipRunwaySuffix = (suffix: string): string => {
 };
 
 const runwayVariants = (runway: string): string[] => {
-  const m = runway.match(/^RW(\d{1,2})([A-Z]?)$/);
+  const m = runway.match(RUNWAY_RE);
   if (!m) return [runway];
   const [, num, suffix] = m;
   const variants = [runway];
@@ -116,7 +120,7 @@ const runwayVariants = (runway: string): string[] => {
 };
 
 export const oppositeRunway = (runway: string): string | null => {
-  const m = runway.match(/^RW(\d{1,2})([A-Z]?)$/);
+  const m = runway.match(RUNWAY_RE);
   if (!m) return null;
   const num = parseInt(m[1], 10);
   if (num < 1 || num > 36) return null;
@@ -152,34 +156,18 @@ export const annotateSidRunwayOrigins = (
   }
 };
 
-/**
- * Apply the post-fetch annotations that AirportProcedures has historically
- * done inline:
- *   - SID sequences gain `runwayOrigin` so the line anchors at the runway
- *   - Every procedure gains `magneticCorrection` (when courseType=Magnetic)
- *     so geometry conversion uses true bearings.
- *
- * Mutates the inputs in place so the same Procedure references can be passed
- * directly into displayedProcedures.
- */
 export const applyAirportProcedureAnnotations = (
-  sids: Procedure[],
-  stars: Procedure[],
-  apps: Procedure[],
+  pack: AirportProcedurePack,
   info: AirportInfo | null,
 ): void => {
-  annotateSidRunwayOrigins(sids, runwayCoordsFromApproaches(apps));
+  annotateSidRunwayOrigins(pack.sids, runwayCoordsFromApproaches(pack.apps));
   const magneticCorrection =
     info && info.courseType === 'Magnetic' && info.variation !== null ? info.variation : undefined;
   if (magneticCorrection !== undefined) {
-    for (const p of [...sids, ...stars, ...apps]) p.magneticCorrection = magneticCorrection;
+    for (const p of [...pack.sids, ...pack.stars, ...pack.apps]) p.magneticCorrection = magneticCorrection;
   }
 };
 
-// Throws if all three procedure-kind fetches reject (network error, 5xx, etc.).
-// 404s for individual kinds are non-fatal — they fulfill with [] and the
-// other kinds still load. Callers that prefer silent failure (e.g., the route
-// resolver) should catch this throw at their cache wrapper.
 export const loadAirportProcedures = (airport: string): Promise<AirportProcedurePack> => {
   const cached = airportProceduresCache.get(airport);
   if (cached) return cached;
@@ -197,14 +185,15 @@ export const loadAirportProcedures = (airport: string): Promise<AirportProcedure
     ) {
       throw new Error(`No procedures found for ${airport}`);
     }
-    const sids = sidResult.status === 'fulfilled' ? sidResult.value : [];
-    const stars = starResult.status === 'fulfilled' ? starResult.value : [];
-    const apps = appResult.status === 'fulfilled' ? appResult.value : [];
+    const pack: AirportProcedurePack = {
+      sids: sidResult.status === 'fulfilled' ? sidResult.value : [],
+      stars: starResult.status === 'fulfilled' ? starResult.value : [],
+      apps: appResult.status === 'fulfilled' ? appResult.value : [],
+    };
     const info = infoResult.status === 'fulfilled' ? infoResult.value : null;
-    applyAirportProcedureAnnotations(sids, stars, apps, info);
-    return { sids, stars, apps };
+    applyAirportProcedureAnnotations(pack, info);
+    return pack;
   })();
-  // Don't cache rejections — let the next call retry.
   promise.catch(() => airportProceduresCache.delete(airport));
   airportProceduresCache.set(airport, promise);
   return promise;

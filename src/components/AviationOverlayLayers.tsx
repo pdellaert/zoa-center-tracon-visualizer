@@ -21,13 +21,11 @@ const ANCHOR_LAYER_ID = 'aviation-zorder-anchor';
 const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] };
 
 export const AviationOverlayLayers: Component<AviationOverlayLayersProps> = (props) => {
-  // Two fix sources — procedure (sid/star/app) vs route — mirror the original
-  // two-component architecture (ProcedurePoints + RoutePoints). Unifying them
-  // into a single source caused initial-mount labels to be invisible until a
-  // subsequent overlay change forced solid-map-gl's createEffect on
-  // `source.data` to re-fire (Mapbox symbol layers added synchronously after
-  // addSource sometimes fail to render their features without a follow-up
-  // setData). Splitting the source restores the working pattern.
+  // Two fix sources (procedure vs route) instead of one: a single unified source
+  // left initial-mount labels invisible until a later overlay change forced
+  // solid-map-gl's `source.data` effect to re-fire (Mapbox symbol layers added
+  // synchronously right after addSource sometimes fail to render without a
+  // follow-up setData).
   const procedureFixFeatures = createMemo(() =>
     aggregateOverlayFixFeatures(props.overlays.filter((o) => o.kind !== 'route')),
   );
@@ -37,10 +35,8 @@ export const AviationOverlayLayers: Component<AviationOverlayLayersProps> = (pro
 
   return (
     <>
-      {/* Always-mounted invisible anchor: stable z-position marker so overlay
-          line/arrow layers can reliably insert below the fix text/points
-          (which mount conditionally and would otherwise race with new
-          overlays' layers). */}
+      {/* Invisible z-anchor: overlay line/arrow layers insert below this so
+          they sit under the fix text/points (which mount conditionally). */}
       <Source id="aviation-zorder-anchor-source" source={{ type: 'geojson', data: EMPTY_FC }}>
         <Layer
           id={ANCHOR_LAYER_ID}

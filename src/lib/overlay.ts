@@ -1,10 +1,3 @@
-// Unified data model for the rendering layer. A single component
-// (AviationOverlayLayers) consumes Overlay[] and emits the Mapbox sources
-// + layers; both procedures and routes are reduced to this shape.
-//
-// Procedure overlays are minted per-sequence (matches sequenceLayerId today),
-// route overlays are one per active route. Same renderer for both.
-
 import {
   ArrowFeature,
   FixFeature,
@@ -19,22 +12,18 @@ import { buildRouteGeometry } from '~/lib/routeGeojson';
 export type OverlayKind = 'sid' | 'star' | 'app' | 'route';
 
 export interface Overlay {
-  // Stable identifier used as the Mapbox source-id suffix. Must be unique
-  // across all simultaneously-rendered overlays.
+  // Used as the Mapbox source-id suffix; must be unique across simultaneously-
+  // rendered overlays.
   id: string;
   kind: OverlayKind;
   lineSegments: LineSegment[];
   arrowFeatures: ArrowFeature[];
-  // Fix features local to this overlay. The aggregator dedupes across
-  // overlays at render time, picking the richest label per identifier.
   fixFeatures: FixFeature[];
 }
 
-// Per-Procedure-reference cache so the overlays array passed to the renderer
-// has stable identities across unrelated signal ticks. Without this, every
-// re-run of the App.tsx `overlays` memo would mint fresh Overlay objects and
-// force Mapbox to tear down + remount every source/layer, even though the
-// underlying procedure data hasn't changed.
+// Stable identities across signal ticks: without this, every overlays-memo
+// re-run would mint fresh objects and force Mapbox to tear down/remount every
+// source/layer, even when the underlying procedure data hasn't changed.
 const procedureOverlaysCache = new WeakMap<Procedure, Overlay[]>();
 
 export const buildProcedureOverlays = (procedure: Procedure): Overlay[] => {
@@ -55,11 +44,10 @@ export const buildProcedureOverlays = (procedure: Procedure): Overlay[] => {
   return overlays;
 };
 
-// Per-(originalProcedure, transition) cache so that route resubmits with the
-// same chosen transition return the same filtered Procedure object across
-// re-renders. Without this, the outer procedureOverlaysCache (keyed by
-// Procedure reference) misses every memo tick because the spread literal
-// in filterProcedureForRoute mints a fresh object each call.
+// Stable Procedure ref per (originalProcedure, transition) so route resubmits
+// hit procedureOverlaysCache. Without this, the spread literal in
+// filterProcedureForRoute mints a fresh Procedure each call and the outer
+// cache (keyed by reference) misses every tick.
 const filteredByTransition = new WeakMap<Procedure, Map<string, Procedure>>();
 
 export const filterProcedureForRoute = (
@@ -85,9 +73,6 @@ export const filterProcedureForRoute = (
   return filtered;
 };
 
-// Single overlay per route. buildRouteGeometry already excludes the SID exit /
-// STAR entry fixes from its fixFeatures so the procedure renderer's richer
-// labels win at those coordinates.
 const routeOverlayCache = new WeakMap<Route, Overlay>();
 
 export const buildRouteOverlay = (route: Route): Overlay => {
